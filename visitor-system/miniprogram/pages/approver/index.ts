@@ -29,11 +29,9 @@ Page({
   },
 
   loadPendingList() {
-    const approverId = wx.getStorageSync('userId');
     request<any[]>({
       url: '/api/wx/approver/appointment/pending',
-      method: 'GET',
-      data: { approverId }
+      method: 'GET'
     })
       .then(data => {
         const list = data.map((item: any) => ({

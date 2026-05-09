@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
  * 1. 访客在小程序端注册，自动创建userType=1的记录
  * 2. 审批人/安保由管理员在Web后台预添加（只有手机号，无openid）
  * 3. 用户首次小程序登录时，通过手机号匹配已有账号并绑定openid，避免重复用户
- * 4. 连续爽约达到阈值后自动封禁，封禁期禁止预约
+ * 4. 连续爽约2次后自动封禁3个月，封禁期禁止预约
  *
  * 【依赖说明】
  * - 与Appointment关联：访客通过userId关联预约记录
@@ -43,7 +43,7 @@ public class User {
     private String realName;     // 真实姓名，审批人/安保/管理员必填
     private Integer userType;    // 1-访客 2-审批人 3-安保 4-管理员
     private LocalDateTime createTime;
-    private Integer missedCount;    // 累计爽约次数，达到阈值封禁
+    private Integer missedCount;    // 连续爽约次数（2次则封禁3个月）
     private LocalDateTime bannedUntil;   // 封禁截止时间，null表示未封禁
     private String refreshToken;          // JWT刷新token
     private LocalDateTime refreshTokenExpireTime;  // 刷新token过期时间

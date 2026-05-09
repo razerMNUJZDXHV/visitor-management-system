@@ -1,8 +1,19 @@
 <navigation-bar id="navBar" />
 
 <view class="page-container" style="padding-top: {{navHeight}}px;">
+  <!-- 封禁提示 -->
+  <view wx:if="{{bannedUntil}}" class="ban-tip">
+    <text class="ban-tip-text">您已被限制预约至 {{bannedUntilText}}，原因：连续爽约2次。</text>
+  </view>
+
+  <!-- 爽约警告提示 -->
+  <view wx:elif="{{missedCount > 0}}" class="ban-tip ban-tip-warning">
+    <text class="ban-tip-text">警告：您已爽约 {{missedCount}} 次，再爽约1次将被限制预约3个月。</text>
+  </view>
+
+  <!-- 爽约规则提示（可关闭） -->
   <view wx:if="{{showNoShowPenaltyTip}}" class="ban-tip ban-tip-dismissible">
-    <text class="ban-tip-text">提示：若您在一个月内连续爽约2次，将在三个月内被限制申请。</text>
+    <text class="ban-tip-text">提示：若您连续爽约2次（间隔不超过1个月），将在三个月内被限制申请。</text>
     <text class="ban-tip-close" bindtap="handleCloseNoShowPenaltyTip">✕</text>
   </view>
 

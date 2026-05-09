@@ -60,6 +60,12 @@ public interface AppointmentMapper {
      */
     Appointment findById(@Param("appointmentId") Long appointmentId);
 
+    /**
+     * 根据状态查询预约列表
+     * 定时任务用：查询所有状态为指定值的预约
+     */
+    List<Appointment> listByStatus(@Param("status") Integer status);
+
     // ==================== 爽约判定相关 ====================
 
     /**

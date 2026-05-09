@@ -21,7 +21,11 @@ Page({
     qrStartTime: '',
     qrEndTime: '',
     showNoShowPenaltyTip: true,
-    noShowPenaltyTipDismissKey: ''
+    noShowPenaltyTipDismissKey: '',
+    // 用户封禁状态
+    bannedUntil: '',
+    bannedUntilText: '',
+    missedCount: 0
   },
 
   onLoad() {
@@ -34,7 +38,30 @@ Page({
 
   onShow() {
     this.initNoShowPenaltyTip();
+    this.loadUserBanStatus();
     this.loadAppointmentList();
+  },
+
+  loadUserBanStatus() {
+    const userId = wx.getStorageSync('userId');
+    if (!userId) return;
+    request<any>({
+      url: `/api/wx/user/ban-status`,
+      method: 'GET',
+      data: { userId }
+    })
+    .then(data => {
+      const bannedUntil = data.bannedUntil || '';
+      const missedCount = data.missedCount || 0;
+      this.setData({
+        bannedUntil,
+        bannedUntilText: bannedUntil ? this.formatFullDateTime(new Date(bannedUntil)) : '',
+        missedCount
+      });
+    })
+    .catch(err => {
+      console.error('获取用户封禁状态失败', err);
+    });
   },
 
   initNoShowPenaltyTip() {

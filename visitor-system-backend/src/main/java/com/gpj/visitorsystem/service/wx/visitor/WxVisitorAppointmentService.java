@@ -29,7 +29,7 @@ import java.util.Map;
  * 【核心职责】
  * 1. 处理访客端的预约创建、查询、取消
  * 2. 生成预约二维码（JWT Token + Base64二维码图片）
- * 3. 爽约判定与处罚（连续爽约3次封禁3个月）
+ * 3. 爽约判定与处罚（连续爽约2次封禁3个月）
  * 4. 查询预约设置和开放状态
  * 5. 身份证号AES加密存储保护隐私
  *
@@ -40,7 +40,7 @@ import java.util.Map;
  * 4. 取消预约：未审批前可取消（status=3）
  * 5. 生成二维码：审批通过后生成JWT Token二维码供安保扫码
  * 6. 爽约判定：超过预计离开时间+30分钟宽限期未签到视为爽约
- *    连续爽约3次封禁3个月，禁止预约
+ *    连续爽约2次封禁3个月，禁止预约
  * 7. 身份证号加密：AES加密后入库，查询时解密展示
  *
  * 【依赖说明】
@@ -427,11 +427,12 @@ public class WxVisitorAppointmentService {
                     && previous.getExpectedEndTime() != null
                     && !previous.getExpectedEndTime().isBefore(currentEndTime.minusMonths(1));
 
-            // 计算新的爽约次数
-            int newMissedCount = consecutiveNoShowWithinOneMonth ? 2 : 1;
+            // 计算新的连续爽约次数
+            int currentMissedCount = (user.getMissedCount() == null ? 0 : user.getMissedCount());
+            int newMissedCount = consecutiveNoShowWithinOneMonth ? currentMissedCount + 1 : 1;
             user.setMissedCount(newMissedCount);
-            // 连续爽约，禁止预约3个月
-            if (consecutiveNoShowWithinOneMonth) {
+            // 连续爽约2次，禁止预约3个月
+            if (newMissedCount >= 2) {
                 user.setBannedUntil(now.plusMonths(3));
             }
             userService.update(user);

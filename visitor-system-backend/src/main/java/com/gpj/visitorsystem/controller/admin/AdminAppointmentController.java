@@ -3,7 +3,12 @@ package com.gpj.visitorsystem.controller.admin;
 import com.gpj.visitorsystem.dto.ResultDTO;
 import com.gpj.visitorsystem.dto.admin.AdminAppointmentDetailDTO;
 import com.gpj.visitorsystem.entity.Appointment;
+import com.gpj.visitorsystem.entity.User;
 import com.gpj.visitorsystem.service.admin.AdminAppointmentService;
+import com.gpj.visitorsystem.service.common.UserService;
+import com.gpj.visitorsystem.task.AppointmentTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,8 +37,16 @@ import java.util.Map;
 @RequestMapping("/api/admin/appointment")
 public class AdminAppointmentController {
 
+    private static final Logger logger = LoggerFactory.getLogger(AdminAppointmentController.class);
+
     @Autowired
     private AdminAppointmentService adminAppointmentService;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private AppointmentTask appointmentTask;
 
     /**
      * 查询待审批预约列表
@@ -198,5 +211,40 @@ public class AdminAppointmentController {
         List<Long> appointmentIds = request.get("appointmentIds");
         adminAppointmentService.batchDeleteAppointments(appointmentIds);
         return ResultDTO.success(null);
+    }
+
+    /**
+     * 【管理员】手动触发爽约判定
+     *
+     * 【接口说明】
+     * 立即执行爽约判定任务，无需等待定时任务。
+     * 用于数据修复或紧急处理场景。
+     * 只有管理员(userType=4)可以执行此操作。
+     *
+     * 【请求参数】
+     * 无
+     *
+     * 【返回值】
+     * @return 处理结果详情（处理记录数）
+     *
+     * 【异常情况】
+     * - 无权限：返回 403
+     * - 系统异常：返回 500
+     */
+    @PostMapping("/trigger-no-show-check")
+    public ResultDTO<String> triggerNoShowCheck(@RequestAttribute("userId") Integer adminId) {
+        // 权限校验：只有管理员可以手动触发
+        User admin = userService.findById(adminId);
+        if (admin == null || admin.getUserType() == null || admin.getUserType() != 4) {
+            return ResultDTO.error(403, "无权执行此操作，仅管理员可操作");
+        }
+
+        // 执行爽约判定
+        int processedCount = appointmentTask.processNoShowAppointments();
+
+        // 记录操作日志
+        logger.warn("管理员 {} 手动触发爽约判定，处理记录数：{}", adminId, processedCount);
+
+        return ResultDTO.success(String.format("爽约判定执行完成，共处理 %d 条过期预约记录", processedCount));
     }
 }

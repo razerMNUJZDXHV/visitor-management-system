@@ -91,6 +91,26 @@ const buildHeader = (options: RequestOptions, includeAuth: boolean) => {
 const sendRequest = <T = any>(options: RequestOptions, includeAuth = true): Promise<{ statusCode: number; data: T }> => {
   const { skipAuthRefresh, ...requestOptions } = options;
 
+  // 统一处理GET请求参数：将data拼接到URL
+  if (requestOptions.method === 'GET' && requestOptions.data) {
+    const params = requestOptions.data as Record<string, any>;
+    const queryParts: string[] = [];
+    
+    Object.keys(params).forEach(key => {
+      const value = params[key];
+      if (value !== undefined && value !== null && value !== '') {
+        queryParts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+      }
+    });
+    
+    if (queryParts.length > 0) {
+      const separator = requestOptions.url.includes('?') ? '&' : '?';
+      requestOptions.url += separator + queryParts.join('&');
+    }
+    
+    delete requestOptions.data; // 删除data，避免wx.request重复处理
+  }
+
   return new Promise((resolve, reject) => {
     wx.request({
       ...requestOptions,

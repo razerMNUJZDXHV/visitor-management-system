@@ -448,6 +448,20 @@ const handleHistoryCurrentChange = (page) => {
 }
 
 const goDetail = (item, mode) => {
+  // 保存当前筛选状态到 sessionStorage
+  const filterState = {
+    activeTab: activeTab.value,
+    pendingKeyword: pendingKeyword.value,
+    pendingPage: pendingPage.value,
+    historyScope: historyScope.value,
+    historySearchType: historySearchType.value,
+    historyDateRange: historyDateRange.value,
+    historyStatus: historyStatus.value,
+    historyKeyword: historyKeyword.value,
+    historyPage: historyPage.value
+  }
+  sessionStorage.setItem('approvalCenterFilter', JSON.stringify(filterState))
+
   router.push({
     path: `/approval-detail/${item.appointmentId}`,
     query: {
@@ -624,6 +638,27 @@ watch(historyList, (list) => {
 })
 
 onMounted(() => {
+  // 恢复筛选状态
+  const savedFilter = sessionStorage.getItem('approvalCenterFilter')
+  if (savedFilter) {
+    try {
+      const filterState = JSON.parse(savedFilter)
+      activeTab.value = filterState.activeTab || 'pending'
+      pendingKeyword.value = filterState.pendingKeyword || ''
+      pendingPage.value = filterState.pendingPage || 1
+      historyScope.value = filterState.historyScope || 'all'
+      historySearchType.value = filterState.historySearchType || 'create'
+      historyDateRange.value = filterState.historyDateRange || []
+      historyStatus.value = filterState.historyStatus !== undefined ? filterState.historyStatus : null
+      historyKeyword.value = filterState.historyKeyword || ''
+      historyPage.value = filterState.historyPage || 1
+    } catch (e) {
+      console.error('恢复筛选条件失败：', e)
+    }
+    // 清除 sessionStorage 中的对应项，避免刷新页面时重复恢复
+    sessionStorage.removeItem('approvalCenterFilter')
+  }
+
   reloadAll()
 })
 </script>

@@ -45,6 +45,11 @@
         SELECT * FROM appointment WHERE visitor_id = #{visitorId} ORDER BY create_time DESC
     </select>
 
+    <!-- 根据状态查询预约列表 -->
+    <select id="listByStatus" resultMap="BaseResultMap">
+        SELECT * FROM appointment WHERE status = #{status}
+    </select>
+
     <!-- 根据预约ID查询详情 -->
     <select id="findById" resultMap="BaseResultMap">
         SELECT * FROM appointment WHERE appointment_id = #{appointmentId}

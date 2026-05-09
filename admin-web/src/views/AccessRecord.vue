@@ -311,6 +311,18 @@ const handleSelectionChange = (selection) => {
 }
 
 const goDetail = (row) => {
+  // 保存当前筛选状态到 sessionStorage
+  const filterState = {
+    keyword: keyword.value,
+    dateRange: dateRange.value,
+    accessType: accessType.value,
+    verifyMethod: verifyMethod.value,
+    emergencyOnly: emergencyOnly.value,
+    currentPage: currentPage.value,
+    pageSize: pageSize.value
+  }
+  sessionStorage.setItem('accessRecordFilter', JSON.stringify(filterState))
+
   router.push(`/access-record-detail/${row.logId}`)
 }
 
@@ -399,6 +411,25 @@ watch(recordList, (list) => {
 })
 
 onMounted(() => {
+  // 恢复筛选状态
+  const savedFilter = sessionStorage.getItem('accessRecordFilter')
+  if (savedFilter) {
+    try {
+      const filterState = JSON.parse(savedFilter)
+      keyword.value = filterState.keyword || ''
+      dateRange.value = filterState.dateRange || []
+      accessType.value = filterState.accessType !== undefined ? filterState.accessType : null
+      verifyMethod.value = filterState.verifyMethod !== undefined ? filterState.verifyMethod : null
+      emergencyOnly.value = filterState.emergencyOnly || false
+      currentPage.value = filterState.currentPage || 1
+      pageSize.value = filterState.pageSize || 10
+    } catch (e) {
+      console.error('恢复筛选条件失败：', e)
+    }
+    // 清除 sessionStorage 中的对应项，避免刷新页面时重复恢复
+    sessionStorage.removeItem('accessRecordFilter')
+  }
+
   loadRecords()
 })
 </script>
