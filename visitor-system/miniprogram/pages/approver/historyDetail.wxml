@@ -1,0 +1,40 @@
+<navigation-bar id="navBar" title="预约详情" />
+
+<view class="page-container" style="padding-top: {{navHeight}}px;">
+  <scroll-view class="detail-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="info-card">
+      <view class="card-title">预约状态</view>
+      <view class="status-row">
+        <text class="status-badge status-pending">{{statusText}}</text>
+      </view>
+    </view>
+
+    <view class="info-card">
+      <view class="card-title">访客信息</view>
+      <view class="info-row"><text class="label">姓名：</text>{{appointment.visitorName}}</view>
+      <view class="info-row"><text class="label">手机号：</text>{{appointment.visitorPhone}}</view>
+      <view class="info-row"><text class="label">身份证：</text>{{appointment.visitorIdCard}}</view>
+    </view>
+
+    <view class="info-card">
+      <view class="card-title">被访信息</view>
+      <view class="info-row"><text class="label">被访人：</text>{{appointment.intervieweeName || '未填写'}}</view>
+      <view class="info-row"><text class="label">来访事由：</text>{{appointment.visitReason}}</view>
+    </view>
+
+    <view class="info-card">
+      <view class="card-title">时间信息</view>
+      <view class="info-row"><text class="label">申请时间：</text>{{appointment.createTime}}</view>
+      <view class="info-row"><text class="label">到达时间：</text>{{appointment.expectedStartTime}}</view>
+      <view class="info-row"><text class="label">离开时间：</text>{{appointment.expectedEndTime}}</view>
+      <view class="info-row" wx:if="{{appointment.processTime}}"><text class="label">审批时间：</text>{{appointment.processTime}}</view>
+    </view>
+
+    <!-- 拒绝理由（如果有） -->
+    <view wx:if="{{appointment.status === 2 && appointment.rejectReason}}" class="info-card">
+      <view class="card-title">拒绝理由</view>
+      <view class="reason-content">{{appointment.rejectReason}}</view>
+    </view>
+  </scroll-view>
+
+</view>

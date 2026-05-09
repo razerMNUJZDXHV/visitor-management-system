@@ -1,0 +1,113 @@
+<!-- 导航栏：fixed固定，蓝色背景，始终在顶部不动 -->
+<navigation-bar id="navBar" />
+
+<!-- 页面内容：有padding-top，在导航栏下方滚动 -->
+<view class="page-container" style="padding-top: {{navHeight}}px;">
+<view wx:if="{{showAppointmentClosedTip}}" class="ban-tip">
+  ⚠️ {{appointmentClosedMessage || '当前预约未开放'}}
+</view>
+
+<view wx:if="{{dailyLimitReached}}" class="limit-tip">
+  ⚠️ 今日预约人数已达上限（{{dailyLimit}}人），暂无法预约
+</view>
+
+<!-- 核心修复：调用formatBanTime方法格式化时间 -->
+<!-- 简化版：先不调用格式化方法，直接显示原始值 -->
+<view wx:if="{{banInfo.bannedUntil}}" class="ban-tip">
+  ⚠️ 您已被禁止预约至 {{banInfo.bannedUntil}}（累计爽约 {{banInfo.missedCount}} 次）
+</view>
+  <scroll-view class="form-scroll" scroll-y enhanced show-scrollbar="{{false}}" enable-passive="{{true}}">
+
+    <!-- 被访人信息 -->
+    <view class="section">
+      <view class="section-title">被访人信息</view>
+      <view class="form-item">
+        <text class="label">被访人姓名</text>
+        <input value="{{form.intervieweeName}}" placeholder="请输入被访人姓名（选填）" bindinput="handleInput" data-field="intervieweeName" />
+      </view>
+    </view>
+
+    <!-- 申请人信息 -->
+    <view class="section">
+      <view class="section-title">申请人信息</view>
+      <view class="form-item">
+        <text class="label">申请人</text>
+        <input value="{{form.visitorPhone}}" disabled placeholder="自动获取" />
+      </view>
+      <view class="form-item">
+        <text class="label required">申请人姓名</text>
+        <input value="{{form.visitorName}}" placeholder="请输入您的姓名" bindinput="handleInput" data-field="visitorName" />
+      </view>
+      <view class="form-item">
+        <text class="label required">身份证号</text>
+        <input value="{{form.visitorIdCard}}" placeholder="请输入您的身份证号" bindinput="handleIdCardInput" maxlength="18" />
+      </view>
+      <view class="form-item textarea-item">
+        <text class="label required">来访事由</text>
+        <textarea value="{{form.visitReason}}" placeholder="请输入来访事由" maxlength="500" bindinput="handleReasonInput"></textarea>
+        <view class="word-count {{reasonLength >= 500 ? 'over-limit' : ''}}">{{reasonLength}}/500</view>
+      </view>
+
+      <!-- 预计到达时间 -->
+      <view class="form-item">
+        <text class="label required">预计到达时间</text>
+        <view class="picker-container" bindtap="openPicker" data-type="start">
+          <text class="picker-text">{{form.expectedStartTime || '请选择'}}</text>
+          <text class="picker-arrow">></text>
+        </view>
+      </view>
+
+      <!-- 预计离开时间 -->
+      <view class="form-item">
+        <text class="label required">预计离开时间</text>
+        <view class="picker-container" bindtap="openPicker" data-type="end">
+          <text class="picker-text">{{form.expectedEndTime || '请选择'}}</text>
+          <text class="picker-arrow">></text>
+        </view>
+      </view>
+
+      <view class="form-item">
+        <text class="label">申请日期</text>
+        <input value="{{applyDate}}" disabled placeholder="自动生成" />
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 自定义时间选择器弹窗 -->
+  <view class="picker-modal" wx:if="{{showPicker}}" catchtouchmove="preventMove">
+    <view class="picker-mask" bindtap="closePicker"></view>
+    <view class="picker-content">
+      <view class="picker-header">
+        <text class="cancel" bindtap="closePicker">取消</text>
+        <text class="title">{{pickerTitle}}</text>
+        <text class="confirm" bindtap="confirmPicker">确定</text>
+      </view>
+      <picker-view indicator-style="height: 50px;" value="{{pickerValue}}" bindchange="onPickerChange" class="picker-view">
+        <picker-view-column>
+          <view wx:for="{{years}}" wx:key="index">{{item}}年</view>
+        </picker-view-column>
+        <picker-view-column>
+          <view wx:for="{{months}}" wx:key="index">{{item}}月</view>
+        </picker-view-column>
+        <picker-view-column>
+          <view wx:for="{{days}}" wx:key="index">{{item}}日</view>
+        </picker-view-column>
+        <picker-view-column>
+          <view wx:for="{{hours}}" wx:key="index">{{item}}时</view>
+        </picker-view-column>
+        <picker-view-column>
+          <view wx:for="{{minutes}}" wx:key="index">{{item}}分</view>
+        </picker-view-column>
+      </picker-view>
+    </view>
+  </view>
+  
+  <!-- 底部固定按钮 -->
+  <view class="bottom-bar">
+    <button class="reset-btn" bindtap="handleReset">重置</button>
+    <button class="submit-btn" bindtap="handleSubmit">提交</button>
+  </view>
+
+</view>
+
+<custom-tab-bar />

@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: visitor-system
+  datasource:
+    url: jdbc:mysql://localhost:3306/visitor_db?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf-8
+    username: root
+    password: mysql
+    driver-class-name: com.mysql.cj.jdbc.Driver
+server:
+  port: 8080
+
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.gpj.visitorsystem.entity
+  configuration:
+    map-underscore-to-camel-case: true
+
+wechat:
+  appid: wx1548531f82dbc78b
+  secret: 1c12a83f1a78a12a9054d3710ee41697
+
+jwt:
+  secret: your-very-long-secret-key-for-jwt-256-bit  # 至少32字符
+  expiration: 7200000   # 2小时，单位毫秒
+
+# application.yml
+app:
+  aes:
+    key: YingDaVisitor2026Key2026 # 32位密钥（AES-256）

@@ -1,0 +1,115 @@
+@import "../appointment/list.less";
+
+.page-container {
+  height: 100vh;
+  padding-bottom: 0;
+}
+
+.detail-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20rpx;
+  padding-bottom: 40rpx;
+  box-sizing: border-box;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.detail-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.info-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.05);
+}
+
+.card-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.card-title.required::before {
+  content: '*';
+  color: #f5222d;
+  margin-right: 8rpx;
+}
+
+.status-row {
+  display: flex;
+  justify-content: center;
+  padding: 10rpx 0;
+}
+
+.status-badge {
+  font-size: 30rpx;
+  padding: 10rpx 40rpx;
+  border-radius: 40rpx;
+  font-weight: 500;
+}
+
+.status-pending { background: #fff7e6; color: #fa8c16; }
+
+.info-row {
+  display: flex;
+  margin-bottom: 16rpx;
+  font-size: 28rpx;
+  line-height: 1.5;
+  color: #333;
+}
+
+.label {
+  width: 160rpx;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.reject-textarea {
+  width: 100%;
+  min-height: 160rpx;
+  font-size: 28rpx;
+  padding: 16rpx;
+  border: 1rpx solid #e8e8e8;
+  border-radius: 8rpx;
+  box-sizing: border-box;
+}
+
+.word-count {
+  text-align: right;
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 8rpx;
+}
+
+.word-count.over-limit {
+  color: #f5222d;
+}
+
+.bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 98rpx;
+  display: flex;
+  padding: 20rpx 32rpx;
+  background: #fff;
+  border-top: 1rpx solid #e8e8e8;
+  gap: 20rpx;
+  z-index: 998;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+}
+
+.reason-content {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.6;
+  padding: 8rpx 0;
+  word-break: break-all;
+}

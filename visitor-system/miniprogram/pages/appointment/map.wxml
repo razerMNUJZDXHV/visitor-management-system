@@ -1,0 +1,29 @@
+<navigation-bar id="navBar"/>
+
+<view class="page-container" style="padding-top: {{navHeight}}px;">
+  <map
+    id="myMap"
+    longitude="{{longitude}}"
+    latitude="{{latitude}}"
+    scale="{{scale}}"
+    markers="{{markers}}"
+    polyline="{{polyline}}"
+    show-location
+    bindmarkertap="handleMarkerTap"
+    style="width: 100%; height: 60vh;"
+  ></map>
+
+  <view class="building-list">
+    <view 
+      class="building-item" 
+      wx:for="{{buildings}}" 
+      wx:key="id" 
+      bindtap="handleBuildingTap" 
+      data-id="{{item.id}}"
+    >
+      <text>{{item.name}}</text>
+    </view>
+  </view>
+</view>
+
+<custom-tab-bar />

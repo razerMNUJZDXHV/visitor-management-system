@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  AppointmentMapper.xml
+  预约Mapper的SQL实现
+  namespace: 对应AppointmentMapper接口的全限定名
+-->
+<mapper namespace="com.gpj.visitorsystem.mapper.AppointmentMapper">
+
+    <!-- ==================== 可复用SQL片段 ==================== -->
+
+    <!-- 非紧急登记判断条件（listLeaveTimeReached、listOvertimeStaying共用） -->
+    <sql id="NotEmergencyCondition">
+        (a.interviewee_name IS NULL OR a.interviewee_name &lt;&gt; '紧急手动登记')
+    </sql>
+
+    <!-- 基础ResultMap：数据库列与实体字段的映射 -->
+    <resultMap id="BaseResultMap" type="com.gpj.visitorsystem.entity.Appointment">
+        <id column="appointment_id" property="appointmentId" />
+        <result column="visitor_id" property="visitorId" />
+        <result column="visitor_name" property="visitorName" />
+        <result column="visitor_phone" property="visitorPhone" />
+        <result column="visitor_id_card" property="visitorIdCard" />
+        <result column="interviewee_name" property="intervieweeName" />
+        <result column="visit_reason" property="visitReason" />
+        <result column="expected_start_time" property="expectedStartTime" />
+        <result column="expected_end_time" property="expectedEndTime" />
+        <result column="status" property="status" />
+        <result column="create_time" property="createTime" />
+        <result column="process_time" property="processTime" />
+        <result column="approver_id" property="approverId" />
+        <result column="reject_reason" property="rejectReason" />
+        <result column="qr_code_url" property="qrCodeUrl" />
+        <result column="qr_expire_time" property="qrExpireTime" />
+    </resultMap>
+
+    <!-- 插入预约记录，useGeneratedKeys=true 会自动回填appointmentId -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="appointmentId">
+        INSERT INTO appointment (visitor_id, visitor_name, visitor_phone, visitor_id_card, interviewee_name, visit_reason, expected_start_time, expected_end_time, status, create_time)
+        VALUES (#{visitorId}, #{visitorName}, #{visitorPhone}, #{visitorIdCard}, #{intervieweeName}, #{visitReason}, #{expectedStartTime}, #{expectedEndTime}, 0, NOW())
+    </insert>
+
+    <!-- 根据访客ID查询预约列表（按创建时间倒序） -->
+    <select id="listByVisitorId" resultMap="BaseResultMap">
+        SELECT * FROM appointment WHERE visitor_id = #{visitorId} ORDER BY create_time DESC
+    </select>
+
+    <!-- 根据预约ID查询详情 -->
+    <select id="findById" resultMap="BaseResultMap">
+        SELECT * FROM appointment WHERE appointment_id = #{appointmentId}
+    </select>
+
+    <!--
+        查找访客在指定时间之前最近的已处理预约
+        用于爽约判定：获取上一次预约的结束时间
+        status IN (1,3,4,5,6) 表示已处理（非待审核）的预约
+    -->
+    <select id="findLatestRelevantBefore" resultMap="BaseResultMap">
+        SELECT * FROM appointment WHERE visitor_id = #{visitorId} AND expected_end_time &lt; #{beforeTime}
+        AND status IN (1,3,4,5,6) ORDER BY expected_end_time DESC LIMIT 1
+    </select>
+
+    <!-- 统计访客在指定时间之后的已过期预约数量（status=6） -->
+    <select id="countLaterNoShowProcessed" resultType="int">
+        SELECT COUNT(1) FROM appointment WHERE visitor_id = #{visitorId} AND expected_end_time &gt; #{afterTime} AND status = 6
+    </select>
+
+    <!-- 更新预约状态 -->
+    <update id="updateStatus">
+        UPDATE appointment SET status = #{status} WHERE appointment_id = #{appointmentId}
+    </update>
+
+    <!-- 将待审核预约中已超过预计离开时间的记录标记为已过期 -->
+    <update id="expirePendingAppointments">
+        UPDATE appointment
+        SET status = 6
+        WHERE status = 0
+          AND expected_end_time IS NOT NULL
+          AND expected_end_time &lt;= #{now}
+    </update>
+
+    <!-- 更新预约二维码信息 -->
+    <update id="updateQrCode">
+        UPDATE appointment SET qr_code_url = #{qrCodeUrl}, qr_expire_time = #{qrExpireTime} WHERE appointment_id = #{appointmentId}
+    </update>
+
+    <!-- 审批通过：更新审批人ID、状态为1（预约成功）、处理时间 -->
+    <update id="approve">
+        UPDATE appointment SET approver_id = #{approverId}, status = 1, process_time = #{processTime} WHERE appointment_id = #{appointmentId}
+    </update>
+
+    <!-- 审批拒绝：更新审批人ID、状态为2（预约失败）、拒绝理由、处理时间 -->
+    <update id="reject">
+        UPDATE appointment SET approver_id = #{approverId}, status = 2, reject_reason = #{reason}, process_time = #{processTime} WHERE appointment_id = #{appointmentId}
+    </update>
+
+    <!-- 根据ID删除预约（物理删除） -->
+    <delete id="deleteById">
+        DELETE FROM appointment WHERE appointment_id = #{appointmentId}
+    </delete>
+
+    <!-- 批量删除预约（物理删除） -->
+    <delete id="deleteByIds">
+        DELETE FROM appointment WHERE appointment_id IN
+        <foreach collection="appointmentIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <!-- 根据审批人ID查询其所有预约（按创建时间倒序） -->
+    <select id="findByApproverId" resultMap="BaseResultMap">
+        SELECT * FROM appointment WHERE approver_id = #{approverId} ORDER BY create_time DESC
+    </select>
+
+    <!-- 更新预约的审批人 -->
+    <update id="updateApprover">
+        UPDATE appointment SET approver_id = #{approverId} WHERE appointment_id = #{appointmentId}
+    </update>
+
+    <!-- 更新审批处理时间 -->
+    <update id="updateProcessTime">
+        UPDATE appointment SET process_time = #{processTime} WHERE appointment_id = #{appointmentId}
+    </update>
+
+    <!--
+        查询审批人的待审批预约
+        条件：status=0 且 (approver_id IS NULL 或 approver_id = 指定值)
+        说明：NULL表示未分配，已分配但未处理的也会显示
+    -->
+    <select id="findPendingByApprover" resultMap="BaseResultMap">
+        SELECT * FROM appointment WHERE status = 0 AND (approver_id IS NULL OR approver_id = #{approverId}) ORDER BY create_time DESC
+    </select>
+
+    <!--
+        查询审批人的历史审批记录（支持搜索和筛选）
+        参数说明：
+        - keyword: 关键词（访客姓名/手机号）
+        - startDate/endDate: 日期范围（根据searchType决定是create_time还是process_time）
+        - status: 状态筛选（1表示已处理<含多种状态>，2表示已拒绝）
+        - searchType: 搜索类型（create-按创建时间，process-按处理时间）
+        性能说明：避免使用 DATE() 函数包裹列，改为范围查询以使用索引
+    -->
+    <select id="findHistoryByApprover" resultMap="BaseResultMap">
+        SELECT * FROM appointment WHERE approver_id = #{approverId} AND status &lt;&gt; 0
+        <if test='keyword != null and keyword != ""'> AND (visitor_name LIKE CONCAT('%',#{keyword},'%') OR visitor_phone LIKE CONCAT('%',#{keyword},'%')) </if>
+        <choose>
+            <when test='searchType == "create"'>
+                <if test='startDate != null and startDate != ""'> AND create_time &gt;= STR_TO_DATE(CONCAT(#{startDate}, ' 00:00:00'), '%Y-%m-%d %H:%i:%s') </if>
+                <if test='endDate != null and endDate != ""'> AND create_time &lt;= STR_TO_DATE(CONCAT(#{endDate}, ' 23:59:59'), '%Y-%m-%d %H:%i:%s') </if>
+            </when>
+            <when test='searchType == "process"'>
+                <if test='startDate != null and startDate != ""'> AND process_time &gt;= STR_TO_DATE(CONCAT(#{startDate}, ' 00:00:00'), '%Y-%m-%d %H:%i:%s') </if>
+                <if test='endDate != null and endDate != ""'> AND process_time &lt;= STR_TO_DATE(CONCAT(#{endDate}, ' 23:59:59'), '%Y-%m-%d %H:%i:%s') </if>
+            </when>
+        </choose>
+        <if test='status != null'>
+            <choose>
+                <when test='status == 1'> AND status IN (1,3,4,5,6) </when>
+                <when test='status == 2'> AND status = 2 </when>
+            </choose>
+        </if>
+        ORDER BY process_time DESC, create_time DESC
+    </select>
+
+    <!--
+        管理员查询待审批预约
+        参数：scope=mine时只显示自己可审批的（未分配或已分配给自己）
+    -->
+    <select id="findAdminPending" resultMap="BaseResultMap">
+        SELECT * FROM appointment WHERE status = 0
+        <if test='scope == "mine"'> AND (approver_id IS NULL OR approver_id = #{adminId}) </if>
+        ORDER BY create_time DESC
+    </select>
+
+    <!--
+        查询已到离开时间但未签离的预约（安保告警用）
+        条件：
+        1. status = 4（已签到）
+        2. 不是紧急手动登记
+        3. expected_end_time <= 当前时间（已到离开时间）
+        4. expected_end_time > graceStart（未超过宽限期起始，即还在30分钟宽限内或刚超过）
+        5. 不存在 access_type=2 的记录（未签离）
+    -->
+    <select id="listLeaveTimeReached" resultMap="BaseResultMap">
+            SELECT a.*
+            FROM appointment a
+            WHERE a.status = 4
+                AND <include refid="NotEmergencyCondition" />
+                AND a.expected_end_time &lt;= #{now}
+                AND a.expected_end_time &gt; #{graceStart}
+                AND NOT EXISTS (
+                        SELECT 1 FROM access_log l2
+                        WHERE l2.appointment_id = a.appointment_id
+                            AND l2.access_type = 2
+                )
+            ORDER BY a.expected_end_time ASC
+    </select>
+
+    <!--
+        查询超时滞留的预约（安保告警用）
+        条件：
+        1. status IN (4, 6)（已签到或已过期）
+        2. 不是紧急手动登记
+        3. expected_end_time <= graceDeadline（超过宽限期截止时间）
+        4. 存在 access_type=1 的记录（已签到）
+        5. 不存在 access_type=2 的记录（未签离）
+    -->
+    <select id="listOvertimeStaying" resultMap="BaseResultMap">
+            SELECT a.*
+            FROM appointment a
+            WHERE a.status IN (4, 6)
+                AND <include refid="NotEmergencyCondition" />
+                AND a.expected_end_time &lt;= #{graceDeadline}
+                AND EXISTS (
+                        SELECT 1 FROM access_log l1
+                        WHERE l1.appointment_id = a.appointment_id
+                            AND l1.access_type = 1
+                )
+                AND NOT EXISTS (
+                        SELECT 1 FROM access_log l2
+                        WHERE l2.appointment_id = a.appointment_id
+                            AND l2.access_type = 2
+                )
+            ORDER BY a.expected_end_time ASC
+    </select>
+
+    <!--
+        查询活跃的紧急手动登记预约（安保告警用）
+        条件：
+        1. interviewee_name = '紧急手动登记'（紧急登记标识）
+        2. status = 4（已签到）
+        3. 存在 access_type=1 的记录（已签到）
+        4. 不存在 access_type=2 的记录（未签离）
+    -->
+    <select id="listEmergencyActive" resultMap="BaseResultMap">
+        SELECT a.*
+        FROM appointment a
+        WHERE a.interviewee_name = '紧急手动登记'
+            AND a.status = 4
+            AND EXISTS (
+                SELECT 1 FROM access_log l1
+                WHERE l1.appointment_id = a.appointment_id
+                  AND l1.access_type = 1
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM access_log l2
+                WHERE l2.appointment_id = a.appointment_id
+                  AND l2.access_type = 2
+            )
+        ORDER BY a.create_time DESC
+    </select>
+
+    <!--
+        管理员查询历史预约记录（关联审批人信息）
+        返回类型：AdminAppointmentDetailDTO（包含审批人姓名、手机号）
+        性能说明：避免使用 DATE() 函数包裹列，改为范围查询以使用索引
+    -->
+    <select id="findAdminHistory" resultType="com.gpj.visitorsystem.dto.admin.AdminAppointmentDetailDTO">
+        SELECT a.*, u.real_name AS approver_name, u.phone AS approver_phone
+        FROM appointment a
+        LEFT JOIN user u ON a.approver_id = u.user_id
+        WHERE a.status &lt;&gt; 0
+        <if test='scope == "mine"'> AND a.approver_id = #{adminId} </if>
+        <if test='keyword != null and keyword != ""'>
+            AND (a.visitor_name LIKE CONCAT('%',#{keyword},'%') OR u.real_name LIKE CONCAT('%',#{keyword},'%') OR a.visitor_phone LIKE CONCAT('%',#{keyword},'%'))
+        </if>
+        <choose>
+            <when test='searchType == "create"'>
+                <if test='startDate != null and startDate != ""'> AND a.create_time &gt;= STR_TO_DATE(CONCAT(#{startDate}, ' 00:00:00'), '%Y-%m-%d %H:%i:%s') </if>
+                <if test='endDate != null and endDate != ""'> AND a.create_time &lt;= STR_TO_DATE(CONCAT(#{endDate}, ' 23:59:59'), '%Y-%m-%d %H:%i:%s') </if>
+            </when>
+            <when test='searchType == "process"'>
+                <if test='startDate != null and startDate != ""'> AND a.process_time &gt;= STR_TO_DATE(CONCAT(#{startDate}, ' 00:00:00'), '%Y-%m-%d %H:%i:%s') </if>
+                <if test='endDate != null and endDate != ""'> AND a.process_time &lt;= STR_TO_DATE(CONCAT(#{endDate}, ' 23:59:59'), '%Y-%m-%d %H:%i:%s') </if>
+            </when>
+        </choose>
+        <if test='status != null'> AND a.status = #{status} </if>
+        ORDER BY a.process_time DESC, a.create_time DESC
+    </select>
+
+    <!--
+        查询预约详情（关联审批人信息）
+        返回类型：AdminAppointmentDetailDTO（包含审批人姓名、手机号）
+    -->
+    <select id="findDetailById" resultType="com.gpj.visitorsystem.dto.admin.AdminAppointmentDetailDTO">
+        SELECT
+            a.appointment_id,
+            a.visitor_id,
+            a.visitor_name,
+            a.visitor_phone,
+            a.visitor_id_card,
+            a.interviewee_name,
+            a.visit_reason,
+            a.expected_start_time,
+            a.expected_end_time,
+            a.status,
+            a.qr_code_url,
+            a.qr_expire_time,
+            a.reject_reason,
+            a.create_time,
+            a.process_time,
+            a.approver_id,
+            u.real_name AS approver_name,
+            u.phone AS approver_phone
+        FROM appointment a
+        LEFT JOIN user u ON a.approver_id = u.user_id
+        WHERE a.appointment_id = #{appointmentId}
+    </select>
+
+    <select id="countByStatus" resultType="java.lang.Long">
+        SELECT COUNT(1) FROM appointment WHERE status = #{status}
+    </select>
+
+    <select id="countTodayAppointments" resultType="java.lang.Long">
+        SELECT COUNT(1) FROM appointment WHERE DATE(create_time) = CURDATE()
+    </select>
+
+    <select id="countByDate" resultType="java.lang.Long">
+        SELECT COUNT(1) FROM appointment a
+        WHERE DATE(a.create_time) = #{date}
+        AND (
+            a.status IN (1, 4, 5)
+            OR (a.status = 6 AND EXISTS (
+                SELECT 1 FROM access_log al
+                WHERE al.appointment_id = a.appointment_id AND al.access_type = 1
+            ))
+        )
+    </select>
+
+</mapper>
+
+

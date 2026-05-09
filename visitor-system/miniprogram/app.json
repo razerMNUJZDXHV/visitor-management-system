@@ -1,0 +1,76 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/appointment/create",
+    "pages/appointment/list",
+    "pages/appointment/map",
+    "pages/appointment/detail",
+    "pages/approver/index",
+    "pages/approver/detail",
+    "pages/approver/history",
+    "pages/approver/historyDetail",
+    "pages/security/index",
+    "pages/security/manual",
+    "pages/security/history",
+    "pages/security/historyDetail",
+    "pages/security/stats"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#1677ff",
+    "navigationBarTitleText": "应大访客预约系统",
+    "navigationBarTextStyle": "white",
+    "navigationStyle": "custom"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#666",
+    "selectedColor": "#1677ff",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/appointment/create",
+        "text": "预约申请",
+        "iconPath": "images/appointment.png",
+        "selectedIconPath": "images/appointment-active.png"
+      },
+      {
+        "pagePath": "pages/appointment/list",
+        "text": "我的预约",
+        "iconPath": "images/list.png",
+        "selectedIconPath": "images/list-active.png"
+      },
+      {
+        "pagePath": "pages/appointment/map",
+        "text": "校园地图",
+        "iconPath": "images/map.png",
+        "selectedIconPath": "images/map-active.png"
+      },
+      {
+        "pagePath": "pages/approver/index",
+        "text": "待审批",
+        "iconPath": "images/approval-list.png",
+        "selectedIconPath": "images/approval-list-active.png"
+      },
+      {
+        "pagePath": "pages/approver/history",
+        "text": "审批记录",
+        "iconPath": "images/history.png",
+        "selectedIconPath": "images/history-active.png"
+      }
+    ]
+  },
+  "usingComponents": {
+    "custom-tab-bar": "/custom-tab-bar/index"
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "需要获取你的位置信息，用于显示当前位置和规划校园导航路线"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getLocation"
+  ],
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

@@ -1,0 +1,53 @@
+<navigation-bar id="navBar" title="手动登记" />
+
+<view class="page-container" style="padding-top: {{navHeight}}px;">
+  <scroll-view class="content-scroll" scroll-y="true">
+    <!-- 紧急登记提示 -->
+    <view class="notice-card">
+      <view class="notice-title">紧急登记说明</view>
+      <view class="notice-item">1. 此功能仅用于特殊紧急情况</view>
+      <view class="notice-item">2. 必须获得审批人授权</view>
+      <view class="notice-item">3. 系统将记录授权人和操作人</view>
+    </view>
+
+    <!-- 表单 -->
+    <view class="section">
+      <view class="section-title">授权信息</view>
+      <view class="form-item">
+        <text class="label required">授权审批人ID</text>
+        <input data-field="authorizerId" value="{{form.authorizerId}}" bindinput="onInput" placeholder="请输入审批人ID" type="number" />
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="section-title">访客信息</view>
+
+      <view class="form-item">
+        <text class="label required">访客姓名</text>
+        <input data-field="visitorName" value="{{form.visitorName}}" bindinput="onInput" placeholder="请输入访客姓名" />
+      </view>
+
+      <view class="form-item">
+        <text class="label required">访客手机号</text>
+        <input data-field="visitorPhone" value="{{form.visitorPhone}}" bindinput="onInput" placeholder="请输入11位手机号" type="number" maxlength="11" />
+      </view>
+
+      <view class="form-item">
+        <text class="label required">身份证号</text>
+        <input data-field="visitorIdCard" value="{{form.visitorIdCard}}" bindinput="handleIdCardInput" placeholder="请输入18位身份证号" maxlength="18" />
+      </view>
+
+      <view class="form-item textarea-item">
+        <text class="label required">来访事由</text>
+        <textarea data-field="visitReason" value="{{form.visitReason}}" bindinput="handleReasonInput" placeholder="请输入来访事由" maxlength="500"></textarea>
+        <view class="word-count {{reasonLength >= 500 ? 'over-limit' : ''}}">{{reasonLength}}/500</view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 底部按钮 -->
+  <view class="bottom-bar">
+    <button class="reset-btn" bindtap="handleReset">重置</button>
+    <button class="submit-btn" bindtap="submit">提交登记</button>
+  </view>
+</view>

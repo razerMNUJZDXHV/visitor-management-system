@@ -1,0 +1,35 @@
+<navigation-bar id="navBar" title="访客统计" />
+
+<view class="page-container" style="padding-top: {{navHeight}}px;">
+  <scroll-view class="content-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="summary-card">
+      <view class="period-switch">
+        <text class="period-item {{period === 'day' ? 'active' : ''}}" data-period="day" bindtap="changePeriod">日</text>
+        <text class="period-item {{period === 'week' ? 'active' : ''}}" data-period="week" bindtap="changePeriod">周</text>
+        <text class="period-item {{period === 'month' ? 'active' : ''}}" data-period="month" bindtap="changePeriod">月</text>
+      </view>
+      <view class="metric"><text>总通行量：</text><text class="metric-value">{{totalFlow}}</text></view>
+      <view class="metric"><text>高峰时段：</text><text class="metric-value">{{peakHour}}</text></view>
+    </view>
+
+    <view class="chart-card">
+      <view class="chart-title">分时段流量</view>
+      <view class="bar-row" wx:for="{{hourPoints}}" wx:key="label">
+        <text class="bar-label">{{item.label}}</text>
+        <view class="bar-track"><view class="bar-fill" style="width: {{item.width}}"></view></view>
+        <text class="bar-value">{{item.value}}</text>
+      </view>
+    </view>
+
+    <view class="chart-card">
+      <view class="chart-title">周期流量</view>
+      <view class="bar-row" wx:for="{{flowPoints}}" wx:key="label">
+        <text class="bar-label">{{item.label}}</text>
+        <view class="bar-track"><view class="bar-fill second" style="width: {{item.width}}"></view></view>
+        <text class="bar-value">{{item.value}}</text>
+      </view>
+    </view>
+  </scroll-view>
+</view>
+
+<custom-tab-bar />

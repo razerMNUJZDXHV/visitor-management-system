@@ -1,0 +1,192 @@
+@import "../appointment/list.less";
+
+.search-bar {
+  background: #fff;
+  padding: 20rpx 32rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.search-type {
+  display: flex;
+  gap: 20rpx;
+  flex: 1;
+}
+.search-type text {
+  font-size: 26rpx;
+  color: #666;
+  padding: 6rpx 0;
+}
+.search-type .active {
+  color: #1677ff;
+  border-bottom: 2rpx solid #1677ff;
+}
+
+.clear-btn {
+  font-size: 26rpx;
+  color: #999;
+  padding: 6rpx 0;
+}
+
+.date-dropdown {
+  flex: 1;
+}
+
+.status-dropdown {
+  width: 170rpx;
+  flex-shrink: 0;
+}
+
+.range-sep {
+  font-size: 26rpx;
+  color: #666;
+}
+
+.picker-box {
+  min-width: 150rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  padding: 0 16rpx;
+  background: #f5f5f5;
+  border-radius: 8rpx;
+  font-size: 24rpx;
+  color: #333;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8rpx);
+  left: 0;
+  min-width: 100%;
+  background: #f5f5f5;
+  border-radius: 8rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  height: 64rpx;
+  line-height: 64rpx;
+  padding: 0 16rpx;
+  font-size: 24rpx;
+  color: #333;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.dropdown-item.active {
+  background: #1677ff;
+  color: #fff;
+}
+
+.cascade-row {
+  display: flex;
+  max-height: 300rpx;
+  overflow: hidden;
+}
+
+.cascade-col {
+  flex: 1;
+  max-height: 300rpx;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.cascade-col::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.cascade-title {
+  height: 48rpx;
+  line-height: 48rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: #666;
+  font-weight: bold;
+  position: sticky;
+  top: 0;
+  background: #f5f5f5;
+}
+
+.cascade-item {
+  height: 56rpx;
+  line-height: 56rpx;
+  text-align: center;
+  font-size: 24rpx;
+  color: #333;
+}
+
+.cascade-item.active {
+  background: #1677ff;
+  color: #fff;
+  border-radius: 6rpx;
+}
+
+.cascade-footer {
+  display: flex;
+  justify-content: center;
+  gap: 40rpx;
+  margin-top: 8rpx;
+  padding-top: 8rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.cascade-footer text {
+  font-size: 26rpx;
+  color: #1677ff;
+  padding: 8rpx 16rpx;
+}
+
+.search-input {
+  flex: 1;
+  height: 64rpx;
+  padding: 0 16rpx;
+  border: 1rpx solid #e8e8e8;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+}
+
+.search-btn {
+  flex: 0 0 auto;
+  height: 64rpx;
+  line-height: 64rpx;
+  padding: 0 24rpx;
+  font-size: 28rpx;
+  background: #1677ff;
+  color: #fff;
+  border-radius: 8rpx;
+}
+
+/* 列表项状态标签靠右 */
+.appointment-item .item-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.status-badge {
+  font-size: 26rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 20rpx;
+  font-weight: 500;
+}
+
+.status-success { background: #e6f7ff; color: #1890ff; }
+.status-fail { background: #fff1f0; color: #f5222d; }

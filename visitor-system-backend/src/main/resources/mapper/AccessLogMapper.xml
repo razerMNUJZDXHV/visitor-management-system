@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.gpj.visitorsystem.mapper.AccessLogMapper">
+
+    <!-- ==================== 可复用SQL片段 ==================== -->
+
+    <!-- 通行记录查询字段列表（listRecords和findRecordDetail共用） -->
+    <sql id="AccessLog_Select_Columns">
+        l.log_id AS logId, l.appointment_id AS appointmentId, l.visitor_id AS visitorId, l.security_id AS securityId,
+        l.access_type AS accessType, l.verify_method AS verifyMethod, l.authorizer_id AS authorizerId, l.access_time AS accessTime,
+        a.visitor_name AS visitorName, u.real_name AS visitorNameAlt, a.visitor_phone AS visitorPhone, u.phone AS visitorPhoneAlt,
+        a.visitor_id_card AS visitorIdCard, a.visit_reason AS visitReason, a.expected_start_time AS expectedStartTime, a.expected_end_time AS expectedEndTime,
+        a.status AS appointmentStatus,
+        su.real_name AS securityName, su.phone AS securityPhone,
+        au.real_name AS authorizerName, au.phone AS authorizerPhone,
+        CASE WHEN l.authorizer_id IS NOT NULL THEN TRUE ELSE FALSE END AS emergency
+    </sql>
+
+    <!-- 通行记录表关联（listRecords和findRecordDetail共用） -->
+    <sql id="AccessLog_Joins">
+        LEFT JOIN appointment a ON l.appointment_id = a.appointment_id
+        LEFT JOIN user u ON l.visitor_id = u.user_id
+        LEFT JOIN user su ON l.security_id = su.user_id
+        LEFT JOIN user au ON l.authorizer_id = au.user_id
+    </sql>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="logId">
+        INSERT INTO access_log (appointment_id, visitor_id, security_id, access_type, access_time, verify_method, authorizer_id)
+        VALUES (#{appointmentId}, #{visitorId}, #{securityId}, #{accessType}, #{accessTime}, #{verifyMethod}, #{authorizerId})
+    </insert>
+
+    <select id="countByAppointmentAndType" resultType="int">
+        SELECT COUNT(1) FROM access_log WHERE appointment_id = #{appointmentId} AND access_type = #{accessType}
+    </select>
+
+    <select id="countSignOutByAppointment" resultType="int">
+        SELECT COUNT(1) FROM access_log WHERE appointment_id = #{appointmentId} AND access_type = 2
+    </select>
+
+    <select id="findFirstAccessTimeByAppointmentAndType" resultType="java.time.LocalDateTime">
+        SELECT MIN(access_time)
+        FROM access_log
+        WHERE appointment_id = #{appointmentId}
+          AND access_type = #{accessType}
+    </select>
+
+    <select id="listRecords" resultType="com.gpj.visitorsystem.dto.wx.security.SecurityAccessRecordDTO">
+        SELECT
+        <include refid="AccessLog_Select_Columns" />
+        FROM access_log l
+        <include refid="AccessLog_Joins" />
+        <where>
+            <if test='startDate != null and startDate != ""'> AND l.access_time &gt;= STR_TO_DATE(CONCAT(#{startDate}, ' 00:00:00'), '%Y-%m-%d %H:%i:%s') </if>
+            <if test='endDate != null and endDate != ""'> AND l.access_time &lt;= STR_TO_DATE(CONCAT(#{endDate}, ' 23:59:59'), '%Y-%m-%d %H:%i:%s') </if>
+            <if test='keyword != null and keyword != ""'>
+                AND (a.visitor_name LIKE CONCAT('%',#{keyword},'%')
+                     OR u.real_name LIKE CONCAT('%',#{keyword},'%')
+                     OR a.visitor_phone LIKE CONCAT('%',#{keyword},'%')
+                     OR u.phone LIKE CONCAT('%',#{keyword},'%')
+                     OR su.real_name LIKE CONCAT('%',#{keyword},'%')
+                     OR au.real_name LIKE CONCAT('%',#{keyword},'%'))
+            </if>
+            <if test='accessType != null'> AND l.access_type = #{accessType} </if>
+            <if test='verifyMethod != null'> AND l.verify_method = #{verifyMethod} </if>
+            <if test='emergencyOnly != null and emergencyOnly'> AND l.authorizer_id IS NOT NULL </if>
+        </where>
+        ORDER BY l.access_time DESC
+    </select>
+
+    <select id="findRecordDetail" resultType="com.gpj.visitorsystem.dto.wx.security.SecurityAccessRecordDTO">
+        SELECT 
+        <include refid="AccessLog_Select_Columns" />
+        FROM access_log l
+        <include refid="AccessLog_Joins" />
+        WHERE l.log_id = #{logId}
+    </select>
+
+    <!-- 根据ID删除通行记录 -->
+    <delete id="deleteById">
+        DELETE FROM access_log WHERE log_id = #{logId}
+    </delete>
+
+    <!-- 批量删除通行记录 -->
+    <delete id="deleteByIds">
+        DELETE FROM access_log WHERE log_id IN
+        <foreach collection="logIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <resultMap id="StatsPointResultMap" type="com.gpj.visitorsystem.dto.wx.security.SecurityStatsDTO$StatsPoint">
+        <result column="label" property="label" />
+        <result column="value" property="value" />
+    </resultMap>
+
+    <select id="countFlowByDate" resultMap="StatsPointResultMap">
+        SELECT DATE_FORMAT(access_time, '%Y-%m-%d') AS label, COUNT(1) AS value 
+        FROM access_log 
+        WHERE access_time &gt;= #{start} 
+        GROUP BY DATE_FORMAT(access_time, '%Y-%m-%d') 
+        ORDER BY label
+    </select>
+
+    <select id="countFlowByHour" resultMap="StatsPointResultMap">
+        SELECT DATE_FORMAT(access_time, '%H:00') AS label, COUNT(1) AS value 
+        FROM access_log 
+        WHERE access_time &gt;= #{start} 
+        GROUP BY DATE_FORMAT(access_time, '%H:00') 
+        ORDER BY label
+    </select>
+
+    <select id="countFlowByHourRange" resultMap="StatsPointResultMap">
+        SELECT DATE_FORMAT(access_time, '%H:00') AS label, COUNT(1) AS value 
+        FROM access_log 
+        WHERE access_time &gt;= #{start} AND access_time &lt;= #{end}
+        GROUP BY DATE_FORMAT(access_time, '%H:00') 
+        ORDER BY label
+    </select>
+
+    <select id="countTotalFrom" resultType="java.lang.Long">
+        SELECT COUNT(1) 
+        FROM access_log 
+        WHERE access_time &gt;= #{start}
+    </select>
+
+    <select id="countTodayFlow" resultType="java.lang.Long">
+        SELECT COUNT(1) FROM access_log WHERE access_time &gt;= CURDATE() AND access_time &lt; CURDATE() + INTERVAL 1 DAY
+    </select>
+
+    <select id="countTodaySignIn" resultType="java.lang.Long">
+        SELECT COUNT(1) FROM access_log WHERE access_time &gt;= CURDATE() AND access_time &lt; CURDATE() + INTERVAL 1 DAY AND access_type = 1
+    </select>
+
+    <select id="countTodaySignOut" resultType="java.lang.Long">
+        SELECT COUNT(1) FROM access_log WHERE access_time &gt;= CURDATE() AND access_time &lt; CURDATE() + INTERVAL 1 DAY AND access_type = 2
+    </select>
+
+    <select id="countTodayEmergency" resultType="java.lang.Long">
+        SELECT COUNT(1) FROM access_log WHERE access_time &gt;= CURDATE() AND access_time &lt; CURDATE() + INTERVAL 1 DAY AND authorizer_id IS NOT NULL
+    </select>
+
+    <select id="countTotalEmergency" resultType="java.lang.Long">
+        SELECT COUNT(1) FROM access_log WHERE authorizer_id IS NOT NULL
+    </select>
+
+    <select id="countDailyFlow" resultMap="StatsPointResultMap">
+        SELECT DATE_FORMAT(access_time, '%Y-%m-%d') AS label, COUNT(1) AS value 
+        FROM access_log 
+        WHERE access_time &gt;= DATE_SUB(CURDATE(), INTERVAL #{days} DAY) 
+        GROUP BY DATE_FORMAT(access_time, '%Y-%m-%d') 
+        ORDER BY label
+    </select>
+
+</mapper>

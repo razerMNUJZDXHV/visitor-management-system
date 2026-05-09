@@ -1,0 +1,110 @@
+@import "../appointment/list.less";
+
+/* 订阅提示条 */
+.subscribe-tip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #e6f7ff;
+  border: 1rpx solid #91d5ff;
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  margin: 20rpx 24rpx;
+  font-size: 26rpx;
+  color: #0050b3;
+}
+
+.tip-text {
+  flex: 1;
+  margin-right: 16rpx;
+}
+
+.tip-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.tip-close {
+  font-size: 32rpx;
+  color: #999;
+  padding: 0 16rpx;
+}
+
+.tip-btn {
+  color: #1677ff;
+  font-weight: 500;
+  padding: 8rpx 20rpx;
+  border: 1rpx solid #1677ff;
+  border-radius: 8rpx;
+}
+
+.welcome-card {
+  background: #fff;
+  padding: 24rpx 32rpx;
+  margin-bottom: 20rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.welcome-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.welcome-text {
+  font-size: 30rpx;      // 适当调小
+  font-weight: 500;
+  color: #333;
+}
+
+.pending-summary {
+  display: flex;
+  align-items: center;
+}
+
+.summary-text {
+  font-size: 26rpx;
+  color: #1677ff;
+}
+
+.group-section {
+  margin-bottom: 20rpx;
+}
+
+.group-header {
+  padding: 20rpx 32rpx;
+  background: #f5f7fa;
+  font-size: 28rpx;
+  color: #666;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1rpx solid #e8e8e8;
+}
+
+/* 让“更早”可点击且有反馈 */
+.group-header:active {
+  background: #e9ecef;
+}
+
+.status-badge {
+  font-size: 24rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 20rpx;
+}
+
+.status-pending {
+  background: #fff7e6;
+  color: #fa8c16;
+}
+
+/* 列表项调整 */
+.appointment-item .item-header {
+  justify-content: space-between;
+}
+
+.apply-date {
+  font-size: 24rpx;
+  color: #999;
+}

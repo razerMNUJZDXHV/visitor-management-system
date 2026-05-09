@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.gpj.visitorsystem.mapper.UserMapper">
+
+    <!-- ==================== 可复用SQL片段 ==================== -->
+
+    <!-- 用户搜索条件（listUsers、listUsersPage、countUsers共用） -->
+    <sql id="User_Where_Condition">
+        <if test="phone != null and phone != ''">
+            AND phone LIKE CONCAT('%', #{phone}, '%')
+        </if>
+        <if test="realName != null and realName != ''">
+            AND real_name LIKE CONCAT('%', #{realName}, '%')
+        </if>
+        <if test="userType != null">
+            AND user_type = #{userType}
+        </if>
+    </sql>
+
+    <resultMap id="BaseResultMap" type="com.gpj.visitorsystem.entity.User">
+        <id column="user_id" property="userId" />
+        <result column="openid" property="openid" />
+        <result column="session_key" property="sessionKey" />
+        <result column="phone" property="phone" />
+        <result column="real_name" property="realName" />
+        <result column="user_type" property="userType" />
+        <result column="create_time" property="createTime" />
+        <!-- ==================== 核心修复1：补充 password 映射（仅MyBatis内部用，@JsonIgnore不会返回前端） ==================== -->
+        <result column="password" property="password" />
+        <result column="missed_count" property="missedCount" />
+        <result column="banned_until" property="bannedUntil" />
+        <result column="refresh_token" property="refreshToken" />
+        <result column="refresh_token_expire_time" property="refreshTokenExpireTime" />
+    </resultMap>
+
+    <!-- 根据Openid查询用户（不需要password） -->
+    <select id="findByOpenid" resultMap="BaseResultMap">
+        SELECT user_id, openid, session_key, phone, real_name, user_type, create_time
+        FROM user WHERE openid = #{openid}
+    </select>
+
+    <!-- ==================== 核心修复2：登录查询必须返回 password！ ==================== -->
+    <select id="findByPhone" resultMap="BaseResultMap">
+        SELECT user_id, openid, session_key, phone, real_name, user_type, create_time, password
+        FROM user WHERE phone = #{phone}
+    </select>
+
+    <!-- 基础更新（不含密码） -->
+    <update id="update">
+        UPDATE user
+        <set>
+            <if test="openid != null">openid = #{openid},</if>
+            <!-- 特殊处理：允许将 openid 设为 null（用于解绑临时用户） -->
+            <if test="openid == null and sessionKey != null">openid = NULL,</if>
+            <if test="sessionKey != null">session_key = #{sessionKey},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="realName != null">real_name = #{realName},</if>
+            <if test="userType != null">user_type = #{userType},</if>
+            <if test="missedCount != null">missed_count = #{missedCount},</if>
+            <if test="bannedUntil != null">banned_until = #{bannedUntil},</if>
+            <if test="refreshToken != null">refresh_token = #{refreshToken},</if>
+            <if test="refreshTokenExpireTime != null">refresh_token_expire_time = #{refreshTokenExpireTime},</if>
+        </set>
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- 根据ID查询用户（不需要password） -->
+    <select id="findById" resultMap="BaseResultMap">
+        SELECT user_id, openid, session_key, phone, real_name, user_type, create_time,
+        missed_count, banned_until
+        FROM user WHERE user_id = #{userId}
+    </select>
+
+    <!-- 多条件查询用户列表（不分页，不需要password） -->
+    <select id="listUsers" resultMap="BaseResultMap">
+        SELECT user_id, openid, session_key, phone, real_name, user_type, create_time
+        FROM user
+        <where>
+            <include refid="User_Where_Condition" />
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 新增用户：确认包含password字段 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="userId">
+        INSERT INTO user (openid, session_key, phone, real_name, user_type, password, create_time)
+        VALUES (#{openid}, #{sessionKey}, #{phone}, #{realName}, #{userType}, #{password}, NOW())
+    </insert>
+
+    <!-- 更新用户：确认password的if条件 -->
+    <update id="updateUser">
+        UPDATE user
+        <set>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="realName != null">real_name = #{realName},</if>
+            <if test="userType != null">user_type = #{userType},</if>
+            <!-- 关键：password非null时才更新 -->
+            <if test="password != null">password = #{password},</if>
+            <if test="openid != null">openid = #{openid},</if>
+            <if test="sessionKey != null">session_key = #{sessionKey},</if>
+        </set>
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- 删除用户 -->
+    <delete id="deleteUserById">
+        DELETE FROM user WHERE user_id = #{userId}
+    </delete>
+
+    <!-- 分页查询用户列表（不需要password） -->
+    <select id="listUsersPage" resultMap="BaseResultMap">
+        SELECT user_id, openid, session_key, phone, real_name, user_type, create_time
+        FROM user
+        <where>
+            <include refid="User_Where_Condition" />
+        </where>
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <!-- 查询用户总数（分页配套） -->
+    <select id="countUsers" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM user
+        <where>
+            <include refid="User_Where_Condition" />
+        </where>
+    </select>
+
+</mapper>

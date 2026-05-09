@@ -1,0 +1,12 @@
+<navigation-bar id="navBar" />
+<view class="container">
+  <view class="logo">
+    <text class="logo-text">欢迎使用应大访客预约系统</text>
+  </view>
+  <view class="tip">
+    <text>请授权手机号以完成登录</text>
+  </view>
+  <button class="login-btn" open-type="getPhoneNumber" bindgetphonenumber="handleGetPhoneNumber">
+    授权手机号登录
+  </button>
+</view>

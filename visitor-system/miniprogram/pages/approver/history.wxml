@@ -1,0 +1,104 @@
+<navigation-bar id="navBar" title="审批记录" />
+
+<view class="page-container" style="padding-top: {{navHeight}}px;">
+  <view class="search-bar">
+    <!-- 第一行：关键词搜索 -->
+    <view class="search-row">
+      <input class="search-input" placeholder="姓名/手机号" value="{{keyword}}" bindinput="onKeywordInput" />
+      <button class="search-btn" bindtap="handleSearch">搜索</button>
+    </view>
+
+    <!-- 第二行：日期范围（仿安保端级联选择） -->
+    <view class="search-row">
+      <view class="dropdown date-dropdown">
+        <view class="picker-box" bindtap="toggleStartDate">{{startDate || '开始日期'}}</view>
+        <view class="dropdown-menu" wx:if="{{startDateOpen}}">
+          <view class="cascade-row">
+            <view class="cascade-col">
+              <view class="cascade-title">年</view>
+              <view wx:for="{{startYears}}" wx:key="*this" class="cascade-item {{item == startYear ? 'active' : ''}}" bindtap="selectStartYear" data-val="{{item}}">{{item}}</view>
+            </view>
+            <view class="cascade-col">
+              <view class="cascade-title">月</view>
+              <view wx:for="{{startMonths}}" wx:key="*this" class="cascade-item {{item == startMonth ? 'active' : ''}}" bindtap="selectStartMonth" data-val="{{item}}">{{item}}月</view>
+            </view>
+            <view class="cascade-col">
+              <view class="cascade-title">日</view>
+              <view wx:for="{{startDays}}" wx:key="*this" class="cascade-item {{item == startDay ? 'active' : ''}}" bindtap="selectStartDay" data-val="{{item}}">{{item}}日</view>
+            </view>
+          </view>
+          <view class="cascade-footer">
+            <text bindtap="confirmStartDate">确定</text>
+            <text bindtap="clearStartDate">清空</text>
+          </view>
+        </view>
+      </view>
+
+      <text class="range-sep">至</text>
+
+      <view class="dropdown date-dropdown">
+        <view class="picker-box" bindtap="toggleEndDate">{{endDate || '结束日期'}}</view>
+        <view class="dropdown-menu" wx:if="{{endDateOpen}}">
+          <view class="cascade-row">
+            <view class="cascade-col">
+              <view class="cascade-title">年</view>
+              <view wx:for="{{endYears}}" wx:key="*this" class="cascade-item {{item == endYear ? 'active' : ''}}" bindtap="selectEndYear" data-val="{{item}}">{{item}}</view>
+            </view>
+            <view class="cascade-col">
+              <view class="cascade-title">月</view>
+              <view wx:for="{{endMonths}}" wx:key="*this" class="cascade-item {{item == endMonth ? 'active' : ''}}" bindtap="selectEndMonth" data-val="{{item}}">{{item}}月</view>
+            </view>
+            <view class="cascade-col">
+              <view class="cascade-title">日</view>
+              <view wx:for="{{endDays}}" wx:key="*this" class="cascade-item {{item == endDay ? 'active' : ''}}" bindtap="selectEndDay" data-val="{{item}}">{{item}}日</view>
+            </view>
+          </view>
+          <view class="cascade-footer">
+            <text bindtap="confirmEndDate">确定</text>
+            <text bindtap="clearEndDate">清空</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 第三行：时间类型 + 状态筛选 + 清空 -->
+    <view class="search-row">
+      <view class="search-type">
+        <text class="{{searchType === 'create' ? 'active' : ''}}" bindtap="setSearchType" data-type="create">申请时间</text>
+        <text class="{{searchType === 'process' ? 'active' : ''}}" bindtap="setSearchType" data-type="process">处理时间</text>
+      </view>
+
+      <view class="dropdown status-dropdown">
+        <view class="picker-box" bindtap="toggleStatus">{{statusOptions[statusIndex]}}</view>
+        <view class="dropdown-menu" wx:if="{{statusOpen}}">
+          <view wx:for="{{statusOptions}}" wx:key="*this" class="dropdown-item {{index === statusIndex ? 'active' : ''}}" data-index="{{index}}" bindtap="selectStatus">{{item}}</view>
+        </view>
+      </view>
+
+      <text class="clear-btn" bindtap="handleClear">清空</text>
+    </view>
+  </view>
+
+  <scroll-view class="list-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view wx:if="{{list.length === 0}}" class="empty">
+      <text>暂无审批记录</text>
+    </view>
+    <view wx:else>
+      <view class="appointment-item" wx:for="{{list}}" wx:key="appointmentId" bindtap="goDetail" data-id="{{item.appointmentId}}">
+        <view class="item-header">
+          <text class="apply-date">{{item.createTimeText}}</text>
+          <!-- 状态标签靠右 -->
+          <text class="status-badge {{item.statusClass}}">{{item.statusText}}</text>
+        </view>
+        <view class="item-content">
+          <view class="row"><text class="label">访客姓名：</text>{{item.visitorName}}</view>
+          <view class="row"><text class="label">手机号：</text>{{item.visitorPhone}}</view>
+          <view class="row"><text class="label">申请时间：</text>{{item.createTimeText}}</view>
+          <view class="row"><text class="label">处理时间：</text>{{item.processTimeText || '—'}}</view>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+</view>
+
+<custom-tab-bar />

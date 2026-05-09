@@ -1,0 +1,86 @@
+<navigation-bar id="navBar" title="安保工作台" />
+
+<view class="page-container" style="padding-top: {{navHeight}}px;">
+  <scroll-view class="content-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="work-card">
+      <view class="work-title">身份核验</view>
+      <view class="work-actions">
+        <button class="primary-btn" bindtap="handleScanVerify">扫码核验</button>
+        <button class="plain-btn" bindtap="goManualRegister">手动登记</button>
+      </view>
+    </view>
+
+    <view class="alert-card" wx:if="{{alerts.length > 0}}">
+      <view class="section-title">实时告警</view>
+      <view class="alert-item" wx:for="{{alerts}}" wx:key="index" bindtap="handleAlertTap" data-index="{{index}}">
+        <view class="alert-line">
+          <text class="alert-type {{item.alertType === 'OVERTIME_EXPIRED' ? 'danger' : 'warn'}}">{{item.alertTypeText}}</text>
+          <text class="alert-time">{{item.occurredAtText}}</text>
+        </view>
+        <view class="alert-meta">
+          <view class="meta-row"><text class="meta-label">访客姓名：</text>{{item.visitorName || '—'}}</view>
+          <view class="meta-row"><text class="meta-label">手机号：</text>{{item.visitorPhone || '—'}}</view>
+          <view class="meta-row" wx:if="{{item.alertType !== 'EMERGENCY_REGISTERED'}}"><text class="meta-label">预计离开：</text>{{item.expectedEndTimeText || '—'}}</view>
+          <view class="meta-row" wx:if="{{item.alertType !== 'EMERGENCY_REGISTERED'}}"><text class="meta-label">通行码过期：</text>{{item.graceExpireTimeText || '—'}}</view>
+          <view class="meta-row" wx:if="{{item.alertType === 'EMERGENCY_REGISTERED'}}"><text class="meta-label">签到时间：</text>{{item.signInTimeText || '—'}}</view>
+        </view>
+        <text class="alert-link">查看详情 ></text>
+      </view>
+    </view>
+
+    <view class="verify-card" wx:if="{{latestVerify}}">
+      <view class="section-title">最近一次核验结果</view>
+      <view class="info-row"><text class="label">核验状态：</text>{{latestVerify.passed ? '通过' : '未通过'}}</view>
+      <view class="info-row"><text class="label">访客姓名：</text>{{latestVerify.visitorName || '—'}}</view>
+      <view class="info-row"><text class="label">手机号：</text>{{latestVerify.visitorPhone || '—'}}</view>
+      <view class="info-row"><text class="label">身份证号：</text>{{latestVerify.visitorIdCard || '—'}}</view>
+      <view class="info-row"><text class="label">提示：</text>{{latestVerify.alertMessage || '无'}}</view>
+    </view>
+
+    <view class="quick-link" bindtap="goHistory">
+      <text>查看通行记录 ></text>
+    </view>
+  </scroll-view>
+
+  <view class="verify-modal" wx:if="{{showVerifyConfirm}}" catchtouchmove="preventMove">
+    <view class="alert-mask" bindtap="closeVerifyConfirm"></view>
+    <view class="verify-panel">
+      <view class="panel-title">{{pendingVerify.actionType === 'SIGN_OUT' ? '现场离场核验' : '现场身份核验'}}</view>
+      <view class="detail-row"><text class="label">访客姓名：</text>{{pendingVerify.visitorName || '—'}}</view>
+      <view class="detail-row"><text class="label">手机号：</text>{{pendingVerify.visitorPhone || '—'}}</view>
+      <view class="detail-row"><text class="label">身份证号：</text>{{pendingVerify.visitorIdCard || '—'}}</view>
+      <view class="detail-message">{{pendingVerify.alertMessage || '请核验无误后操作'}}</view>
+      <view class="panel-actions">
+        <button class="plain-btn" bindtap="handleVerifyReject" disabled="{{confirmingVerify}}">拒绝</button>
+        <button class="primary-btn" bindtap="handleVerifyPass" loading="{{confirmingVerify}}" disabled="{{confirmingVerify}}">{{pendingVerify.actionType === 'SIGN_OUT' ? '通过并签离' : '通过并签到'}}</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="alert-modal" wx:if="{{showAlertDetail}}" catchtouchmove="preventMove">
+    <view class="alert-mask" bindtap="closeAlertDetail"></view>
+    <view class="alert-panel">
+      <view class="panel-title">异常告警详情</view>
+
+      <view class="detail-row"><text class="label">告警类型：</text>{{selectedAlert.alertTypeText || '—'}}</view>
+      <view class="detail-row"><text class="label">访客姓名：</text>{{selectedAlert.visitorName || '—'}}</view>
+      <view class="detail-row"><text class="label">手机号：</text>{{selectedAlert.visitorPhone || '—'}}</view>
+      <view class="detail-row"><text class="label">身份证号：</text>{{selectedAlert.visitorIdCard || '—'}}</view>
+      <view class="detail-row"><text class="label">签到时间：</text>{{selectedAlert.signInTimeText || '—'}}</view>
+      <view class="detail-row" wx:if="{{selectedAlert.alertType !== 'EMERGENCY_REGISTERED'}}"><text class="label">预计到达：</text>{{selectedAlert.expectedStartTimeText || '—'}}</view>
+      <view class="detail-row" wx:if="{{selectedAlert.alertType !== 'EMERGENCY_REGISTERED'}}"><text class="label">预计离开：</text>{{selectedAlert.expectedEndTimeText || '—'}}</view>
+      <view class="detail-row" wx:if="{{selectedAlert.alertType !== 'EMERGENCY_REGISTERED'}}"><text class="label">通行码过期：</text>{{selectedAlert.graceExpireTimeText || '—'}}</view>
+      <view class="detail-row" wx:if="{{selectedAlert.alertType !== 'EMERGENCY_REGISTERED'}}"><text class="label">来访事由：</text>{{selectedAlert.visitReason || '—'}}</view>
+      <view class="detail-row" wx:if="{{selectedAlert.alertType === 'EMERGENCY_REGISTERED'}}"><text class="label">来访事由：</text>{{selectedAlert.visitReason || '—'}}</view>
+
+      <view class="detail-message">{{selectedAlert.message || '—'}}</view>
+
+      <view class="panel-actions">
+        <button class="plain-btn" bindtap="closeAlertDetail">关闭</button>
+        <button class="danger-btn" wx:if="{{selectedAlert.canManualSignOut}}" bindtap="handleManualSignOut" loading="{{signingOut}}" disabled="{{signingOut}}">帮忙签离（手动）</button>
+      </view>
+    </view>
+  </view>
+</view>
+
+<custom-tab-bar />

@@ -1,0 +1,12 @@
+{
+  "notice" : "",
+  "dailyLimit" : 0,
+  "updatedTime" : "2026-05-09T22:46:01.0968788",
+  "rules" : [ {
+    "startDate" : "2026-05-09",
+    "endDate" : "2026-05-10",
+    "startTime" : "00:00",
+    "endTime" : "23:59",
+    "open" : true
+  } ]
+}

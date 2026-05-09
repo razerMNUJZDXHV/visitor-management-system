@@ -1,0 +1,51 @@
+<navigation-bar id="navBar" title="预约详情" />
+
+<view class="page-container" style="padding-top: {{navHeight}}px;">
+  <scroll-view class="detail-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="info-card">
+      <view class="card-title">预约状态</view>
+      <view class="status-row">
+        <text class="status-badge status-pending">{{statusText}}</text>
+      </view>
+    </view>
+
+    <view class="info-card">
+      <view class="card-title">访客信息</view>
+      <view class="info-row"><text class="label">姓名：</text>{{appointment.visitorName}}</view>
+      <view class="info-row"><text class="label">手机号：</text>{{appointment.visitorPhone}}</view>
+      <view class="info-row"><text class="label">身份证：</text>{{appointment.visitorIdCard}}</view>
+    </view>
+
+    <view class="info-card">
+      <view class="card-title">被访信息</view>
+      <view class="info-row"><text class="label">被访人：</text>{{appointment.intervieweeName || '未填写'}}</view>
+      <view class="info-row"><text class="label">来访事由：</text>{{appointment.visitReason}}</view>
+    </view>
+
+    <view class="info-card">
+      <view class="card-title">时间信息</view>
+      <view class="info-row"><text class="label">申请时间：</text>{{appointment.createTime}}</view>
+      <view class="info-row"><text class="label">到达时间：</text>{{appointment.expectedStartTime}}</view>
+      <view class="info-row"><text class="label">离开时间：</text>{{appointment.expectedEndTime}}</view>
+    </view>
+
+    <!-- 拒绝理由填写区（仅当点击拒绝时显示） -->
+    <view wx:if="{{showRejectInput}}" class="info-card">
+      <view class="card-title required">拒绝理由</view>
+      <textarea 
+        class="reject-textarea"
+        value="{{rejectReason}}" 
+        placeholder="请输入拒绝理由（必填，最多300字）" 
+        maxlength="300"
+        bindinput="onReasonInput"
+      ></textarea>
+      <view class="word-count {{reasonLength >= 300 ? 'over-limit' : ''}}">{{reasonLength}}/300</view>
+    </view>
+  </scroll-view>
+
+  <!-- 底部操作按钮 -->
+  <view class="bottom-bar">
+    <button class="reject-btn" bindtap="handleReject">拒绝</button>
+    <button class="approve-btn" bindtap="handleApprove">同意</button>
+  </view>
+</view>
