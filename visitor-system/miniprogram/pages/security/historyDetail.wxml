@@ -2,27 +2,41 @@
 
 <view class="page-container" style="padding-top: {{navHeight}}px;">
   <scroll-view class="detail-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-    <view class="info-card">
-      <view class="card-title">通行信息</view>
-      <view class="info-row"><text class="label">记录ID：</text>{{detail.logId}}</view>
-      <view class="info-row"><text class="label">预约ID：</text>{{detail.appointmentId || '无预约紧急登记'}}</view>
-      <view class="info-row"><text class="label">通行类型：</text>{{detail.accessType === 1 ? '签到' : '签离'}}</view>
-      <view class="info-row"><text class="label">核验方式：</text>{{detail.verifyMethod === 1 ? '扫码' : '手动'}}</view>
-      <view class="info-row"><text class="label">通行时间：</text>{{detail.accessTime}}</view>
-      <view class="info-row"><text class="label">紧急通行：</text>{{detail.emergency ? '是' : '否'}}</view>
-    </view>
+    <!-- 紧急通行标签 -->
+    <view class="emergency-tag" wx:if="{{isEmergency}}">紧急通行</view>
 
+    <!-- 访客信息 -->
     <view class="info-card">
       <view class="card-title">访客信息</view>
-      <view class="info-row"><text class="label">姓名：</text>{{detail.visitorName || '—'}}</view>
-      <view class="info-row"><text class="label">手机号：</text>{{detail.visitorPhone || '—'}}</view>
+      <view class="info-row"><text class="label">姓名：</text>{{isManual ? (detail.visitorNameAlt || '—') : (detail.visitorName || '—')}}</view>
+      <view class="info-row"><text class="label">手机号：</text>{{isManual ? (detail.visitorPhoneAlt || '—') : (detail.visitorPhone || '—')}}</view>
       <view class="info-row"><text class="label">身份证号：</text>{{detail.visitorIdCard || '—'}}</view>
+      <view class="info-row"><text class="label">来访事由：</text>{{detail.visitReason || '—'}}</view>
     </view>
 
+    <!-- 通行信息 -->
     <view class="info-card">
-      <view class="card-title">来访信息</view>
-      <view class="info-row"><text class="label">来访事由：</text>{{detail.visitReason || '—'}}</view>
+      <view class="card-title">通行信息</view>
+      <view class="info-row"><text class="label">通行类型：</text><text class="status-badge {{detail.accessType === 1 ? 'status-success' : 'status-fail'}}">{{detail.accessType === 1 ? '签到' : '签离'}}</text></view>
+      <view class="info-row"><text class="label">核验方式：</text>{{detail.verifyMethod === 1 ? '扫码核验' : '手动登记'}}</view>
+      <view class="info-row"><text class="label">通行时间：</text>{{detail.accessTime}}</view>
+      <view class="info-row" wx:if="{{isSignOut && detail.signInTime}}"><text class="label">对应签到：</text>{{detail.signInTime}}</view>
+      <view class="info-row" wx:if="{{isSignOut && durationText}}"><text class="label">停留时长：</text><text class="value duration">{{durationText}}</text></view>
+    </view>
+
+    <!-- 预约时段 -->
+    <view class="info-card" wx:if="{{detail.expectedStartTime || detail.expectedEndTime}}">
+      <view class="card-title">预约时段</view>
+      <view class="info-row"><text class="label">预计到达：</text>{{detail.expectedStartTime || '—'}}</view>
+      <view class="info-row"><text class="label">预计离开：</text>{{detail.expectedEndTime || '—'}}</view>
+    </view>
+
+    <!-- 核验信息 -->
+    <view class="info-card">
+      <view class="card-title">核验信息</view>
+      <view class="info-row"><text class="label">操作安保：</text>{{detail.securityName || '—'}}</view>
       <view class="info-row"><text class="label">授权审批人：</text>{{detail.authorizerName || '—'}}</view>
+      <view class="info-row" wx:if="{{detail.authorizerPhone}}"><text class="label">审批人电话：</text>{{detail.authorizerPhone}}</view>
     </view>
   </scroll-view>
 </view>

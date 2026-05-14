@@ -1,16 +1,5 @@
 import { request } from '../../utils/request';
-interface HistoryAppointment {
-  appointmentId: number;
-  visitorName: string;
-  visitorPhone: string;
-  createTime: string;
-  processTime: string | null;
-  expectedStartTime: string;
-  expectedEndTime: string;
-  status: number;
-  rejectReason?: string;
-  // ... 其他需要的字段
-}
+import { calculateNavHeight, formatDateTimeFromStr, getApproveHistoryStatusText, getApproveHistoryStatusClass } from '../../utils/util';
 
 Page({
   data: {
@@ -21,12 +10,9 @@ Page({
   },
 
   onLoad(options: any) {
-    const systemInfo = wx.getSystemInfoSync();
-    const statusBarHeight = systemInfo.statusBarHeight || 20;
-    const navContentHeight = 44;
-    this.setData({ navHeight: statusBarHeight + navContentHeight });
+    this.setData({ navHeight: calculateNavHeight() });
 
-    const id = options.id ? parseInt(options.id) : null;
+    const id = options.id ? parseInt(options.id, 10) : null;
     if (!id) {
       wx.showToast({ title: '参数错误', icon: 'none' });
       setTimeout(() => wx.navigateBack(), 1500);
@@ -41,9 +27,13 @@ Page({
       method: 'GET'
     })
       .then(data => {
+        data.createTime = formatDateTimeFromStr(data.createTime);
+        data.expectedStartTime = formatDateTimeFromStr(data.expectedStartTime);
+        data.expectedEndTime = formatDateTimeFromStr(data.expectedEndTime);
+        data.processTime = formatDateTimeFromStr(data.processTime);
         this.setData({
           appointment: data,
-          statusText: this.getStatusText(data.status, data),
+          statusText: this.getStatusText(data.status),
           statusClass: this.getStatusClass(data.status)
         });
       })
@@ -53,13 +43,11 @@ Page({
       });
   },
 
-  getStatusText(status: number, item: HistoryAppointment): string {
-    if (status === 2) return '已拒绝';
-    return '已同意';
+  getStatusText(status: number): string {
+    return getApproveHistoryStatusText(status);
   },
   
   getStatusClass(status: number): string {
-    if (status === 2) return 'status-fail';
-    return 'status-success';
+    return getApproveHistoryStatusClass(status);
   },
 });

@@ -1,10 +1,10 @@
 {
   "notice" : "",
   "dailyLimit" : 0,
-  "updatedTime" : "2026-05-10T02:06:51.1079101",
+  "updatedTime" : "2026-05-14T17:58:23.2246641",
   "rules" : [ {
     "startDate" : "2026-05-10",
-    "endDate" : "2026-05-11",
+    "endDate" : "2026-05-15",
     "startTime" : "00:00",
     "endTime" : "23:59",
     "open" : true

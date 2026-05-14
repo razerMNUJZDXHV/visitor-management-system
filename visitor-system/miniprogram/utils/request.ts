@@ -13,26 +13,9 @@
  * @since 1.0
  */
 
-// ==================== 配置常量 ====================
-const isDev = true; // 是否为开发环境
-const DEV_IP = '192.168.56.1'; // 开发环境电脑的实际局域网IP
-const BASE_URL = isDev ? `http://${DEV_IP}:8080` : 'https://你的生产域名';
-const AUTH_LOGIN_URL = '/api/wx/user/login'; // 登录接口路径
-const AUTH_REFRESH_URL = '/api/wx/user/refresh-token'; // 刷新token接口路径
-const AUTH_EXPIRED_MESSAGE = '登录状态失效，请重新登录'; // 认证过期提示
+import { BASE_URL, AUTH_LOGIN_URL, AUTH_REFRESH_URL, AUTH_EXPIRED_MESSAGE } from './config';
 
 // ==================== 类型定义 ====================
-/** 登录响应数据 */
-interface LoginResponseData {
-  userId: number;
-  openid: string;
-  userType: number;
-  phone: string | null;
-  realName: string | null;
-  token: string;
-  refreshToken: string;
-}
-
 /** 请求选项（扩展微信请求选项） */
 interface RequestOptions extends WechatMiniprogram.RequestOption {
   url: string;
@@ -130,33 +113,6 @@ const sendRequest = <T = any>(options: RequestOptions, includeAuth = true): Prom
 };
 
 /**
- * 保存登录态到本地存储
- * 
- * @param loginRes 登录响应数据
- * @param updateSessionAt 是否更新session时间戳
- */
-const saveLoginSession = (loginRes: LoginResponseData, updateSessionAt = true) => {
-  wx.setStorageSync('token', loginRes.token);
-  if (loginRes.refreshToken) {
-    wx.setStorageSync('refreshToken', loginRes.refreshToken);
-  }
-  wx.setStorageSync('userId', loginRes.userId);
-  wx.setStorageSync('openid', loginRes.openid);
-  wx.setStorageSync('userType', loginRes.userType);
-  wx.setStorageSync('realName', loginRes.realName || '');
-
-  if (loginRes.phone) {
-    wx.setStorageSync('phone', loginRes.phone);
-  } else {
-    wx.removeStorageSync('phone');
-  }
-
-  if (updateSessionAt) {
-    wx.setStorageSync('loginSessionAt', Date.now());
-  }
-};
-
-/**
  * 清除登录态（退出登录或token失效时调用）
  */
 const clearLoginSession = () => {
@@ -169,28 +125,6 @@ const clearLoginSession = () => {
   wx.removeStorageSync('phone');
   wx.removeStorageSync('loginSessionAt');
   wx.removeStorageSync('tempCode');
-};
-
-/**
- * 微信登录（获取临时code）
- * 
- * @returns Promise<code>
- */
-const wxLoginAsync = () => {
-  return new Promise<string>((resolve, reject) => {
-    wx.login({
-      success(res) {
-        if (res.code) {
-          resolve(res.code);
-          return;
-        }
-        reject(new Error('获取微信登录凭证失败'));
-      },
-      fail() {
-        reject(new Error('微信登录失败'));
-      }
-    });
-  });
 };
 
 /**
@@ -232,7 +166,6 @@ const refreshAuthSession = async (): Promise<boolean> => {
       
       return true;
     } catch (error) {
-      console.error('自动刷新登录态失败：', error);
       return false;
     } finally {
       refreshingAuthPromise = null;

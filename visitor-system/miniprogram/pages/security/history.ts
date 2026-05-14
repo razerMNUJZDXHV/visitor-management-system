@@ -1,12 +1,5 @@
 import { request } from '../../utils/request';
-
-function getDaysInMonth(year: number, month: number): number {
-  return new Date(year, month, 0).getDate();
-}
-
-function pad(n: number): string {
-  return String(n).padStart(2, '0');
-}
+import { calculateNavHeight, formatDateTimeFromStr, initCascadeFromDate, onCascadeYearChange, onCascadeMonthChange, buildDateFromCascade } from '../../utils/util';
 
 Page({
   data: {
@@ -41,10 +34,7 @@ Page({
   },
 
   onLoad() {
-    const systemInfo = wx.getSystemInfoSync();
-    const statusBarHeight = systemInfo.statusBarHeight || 20;
-    const navContentHeight = 44;
-    this.setData({ navHeight: statusBarHeight + navContentHeight });
+    this.setData({ navHeight: calculateNavHeight() });
   },
 
   onShow() {
@@ -65,52 +55,20 @@ Page({
   },
 
   initStartCascade() {
-    const now = new Date();
-    const current = this.data.startDate ? this.data.startDate.split('-') : null;
-    const selYear = current ? parseInt(current[0]) : now.getFullYear();
-    const selMonth = current ? parseInt(current[1]) : now.getMonth() + 1;
-    const selDay = current ? parseInt(current[2]) : now.getDate();
-
-    const years: number[] = [];
-    for (let y = now.getFullYear(); y >= now.getFullYear() - 5; y--) {
-      years.push(y);
-    }
-    const months: number[] = [];
-    for (let m = 1; m <= 12; m++) {
-      months.push(m);
-    }
-    const daysCount = getDaysInMonth(selYear, selMonth);
-    const days: number[] = [];
-    for (let d = 1; d <= daysCount; d++) {
-      days.push(d);
-    }
-
-    this.setData({
-      startYears: years,
-      startMonths: months,
-      startDays: days,
-      startYear: selYear,
-      startMonth: selMonth,
-      startDay: Math.min(selDay, daysCount)
-    });
+    const data = initCascadeFromDate(this.data.startDate, 'start');
+    this.setData(data);
   },
 
   selectStartYear(e: any) {
     const year = Number(e.currentTarget.dataset.val);
-    const months: number[] = [];
-    for (let m = 1; m <= 12; m++) months.push(m);
-    const daysCount = getDaysInMonth(year, 1);
-    const days: number[] = [];
-    for (let d = 1; d <= daysCount; d++) days.push(d);
-    this.setData({ startYear: year, startMonth: 1, startDay: 1, startMonths: months, startDays: days });
+    const data = onCascadeYearChange('start', year);
+    this.setData(data);
   },
 
   selectStartMonth(e: any) {
     const month = Number(e.currentTarget.dataset.val);
-    const daysCount = getDaysInMonth(this.data.startYear, month);
-    const days: number[] = [];
-    for (let d = 1; d <= daysCount; d++) days.push(d);
-    this.setData({ startMonth: month, startDay: Math.min(this.data.startDay, daysCount), startDays: days });
+    const data = onCascadeMonthChange('start', this.data.startYear, month, this.data.startDay);
+    this.setData(data);
   },
 
   selectStartDay(e: any) {
@@ -120,7 +78,7 @@ Page({
   confirmStartDate() {
     const { startYear, startMonth, startDay } = this.data;
     if (!startYear || !startMonth || !startDay) return;
-    const date = `${startYear}-${pad(startMonth)}-${pad(startDay)}`;
+    const date = buildDateFromCascade(startYear, startMonth, startDay);
     this.setData({ startDate: date, startDateOpen: false });
     this.loadRecords();
   },
@@ -140,48 +98,20 @@ Page({
   },
 
   initEndCascade() {
-    const now = new Date();
-    const current = this.data.endDate ? this.data.endDate.split('-') : null;
-    const selYear = current ? parseInt(current[0]) : now.getFullYear();
-    const selMonth = current ? parseInt(current[1]) : now.getMonth() + 1;
-    const selDay = current ? parseInt(current[2]) : now.getDate();
-
-    const years: number[] = [];
-    for (let y = now.getFullYear(); y >= now.getFullYear() - 5; y--) {
-      years.push(y);
-    }
-    const months: number[] = [];
-    for (let m = 1; m <= 12; m++) months.push(m);
-    const daysCount = getDaysInMonth(selYear, selMonth);
-    const days: number[] = [];
-    for (let d = 1; d <= daysCount; d++) days.push(d);
-
-    this.setData({
-      endYears: years,
-      endMonths: months,
-      endDays: days,
-      endYear: selYear,
-      endMonth: selMonth,
-      endDay: Math.min(selDay, daysCount)
-    });
+    const data = initCascadeFromDate(this.data.endDate, 'end');
+    this.setData(data);
   },
 
   selectEndYear(e: any) {
     const year = Number(e.currentTarget.dataset.val);
-    const months: number[] = [];
-    for (let m = 1; m <= 12; m++) months.push(m);
-    const daysCount = getDaysInMonth(year, 1);
-    const days: number[] = [];
-    for (let d = 1; d <= daysCount; d++) days.push(d);
-    this.setData({ endYear: year, endMonth: 1, endDay: 1, endMonths: months, endDays: days });
+    const data = onCascadeYearChange('end', year);
+    this.setData(data);
   },
 
   selectEndMonth(e: any) {
     const month = Number(e.currentTarget.dataset.val);
-    const daysCount = getDaysInMonth(this.data.endYear, month);
-    const days: number[] = [];
-    for (let d = 1; d <= daysCount; d++) days.push(d);
-    this.setData({ endMonth: month, endDay: Math.min(this.data.endDay, daysCount), endDays: days });
+    const data = onCascadeMonthChange('end', this.data.endYear, month, this.data.endDay);
+    this.setData(data);
   },
 
   selectEndDay(e: any) {
@@ -191,7 +121,7 @@ Page({
   confirmEndDate() {
     const { endYear, endMonth, endDay } = this.data;
     if (!endYear || !endMonth || !endDay) return;
-    const date = `${endYear}-${pad(endMonth)}-${pad(endDay)}`;
+    const date = buildDateFromCascade(endYear, endMonth, endDay);
     this.setData({ endDate: date, endDateOpen: false });
     this.loadRecords();
   },
@@ -268,8 +198,8 @@ Page({
     if (verifyMethod !== null && verifyMethod !== undefined) {
       requestData.verifyMethod = verifyMethod;
     }
-    if (this.data.emergencyOnly !== undefined && this.data.emergencyOnly !== null) {
-      requestData.emergencyOnly = this.data.emergencyOnly;
+    if (this.data.emergencyOnly) {
+      requestData.emergencyOnly = true;
     }
 
     request<any[]>({
@@ -277,7 +207,11 @@ Page({
       method: 'GET',
       data: requestData
     }).then((list) => {
-      this.setData({ list: list || [] });
+      const formattedList = (list || []).map((item: any) => ({
+        ...item,
+        accessTime: formatDateTimeFromStr(item.accessTime)
+      }));
+      this.setData({ list: formattedList });
     }).catch((err) => {
       wx.showToast({ title: err.msg || '加载失败', icon: 'none' });
     });
@@ -285,6 +219,6 @@ Page({
 
   goDetail(e: any) {
     const id = e.currentTarget.dataset.id;
-    wx.navigateTo({ url: `/pages/security/historyDetail?id=${id}` });
+    wx.navigateTo({ url: `/pages/security/historyDetail?id=${encodeURIComponent(id)}` });
   }
 });

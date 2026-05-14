@@ -11,17 +11,12 @@
  * @since 1.0
  */
 import { request } from '../../utils/request';
+import { calculateNavHeight, formatDateTime as formatDateTimeUtil, formatDateTimeForApi, formatDateTimeFromStr, getDaysInMonth, parseDateTime, validateIdCard } from '../../utils/util';
 
 /** 预约开放状态接口 */
 interface AppointmentOpenStatus {
   open: boolean;
   message?: string;
-}
-
-/** 爽约状态信息 */
-interface BanInfo {
-  bannedUntil: string;
-  missedCount: number;
 }
 
 Page({
@@ -62,15 +57,11 @@ Page({
    * 初始化导航栏高度、填充手机号、设置默认申请日期
    */
   onLoad() {
-    const systemInfo = wx.getSystemInfoSync();
-    const statusBarHeight = systemInfo.statusBarHeight || 20;
-    const navContentHeight = 44;
-    const totalNavHeight = statusBarHeight + navContentHeight;
     const phone = wx.getStorageSync('phone');
     const today = new Date();
 
     this.setData({
-      navHeight: totalNavHeight,
+      navHeight: calculateNavHeight(),
       'form.visitorPhone': phone || '',
       applyDate: this.formatDateTime(today)
     });
@@ -102,8 +93,7 @@ Page({
           appointmentClosedMessage: open ? '' : (data.message || '当前预约未开放')
         });
       })
-      .catch(err => {
-        console.error('获取预约开放状态失败', err);
+      .catch(() => {
         this.setData({
           showAppointmentClosedTip: false,
           appointmentClosedMessage: ''
@@ -126,12 +116,12 @@ Page({
     })
       .then(data => {
         this.setData({
-          'banInfo.bannedUntil': data.bannedUntil || '',
+          'banInfo.bannedUntil': data.bannedUntil ? formatDateTimeFromStr(data.bannedUntil) : '',
           'banInfo.missedCount': data.missedCount || 0
         });
       })
-      .catch(err => {
-        console.error('获取禁止状态失败', err);
+      .catch(() => {
+        // 静默处理，避免打扰用户
       });
   },
 
@@ -150,8 +140,8 @@ Page({
           dailyLimitReached: data.reached || false
         });
       })
-      .catch(err => {
-        console.error('获取预约人数上限状态失败', err);
+      .catch(() => {
+        // 静默处理，避免打扰用户
       });
   },
 
@@ -164,13 +154,7 @@ Page({
    * @returns 格式化后的字符串
    */
   formatDateTime(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hour = String(date.getHours()).padStart(2, '0');
-    const minute = String(date.getMinutes()).padStart(2, '0');
-    const second = String(date.getSeconds()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+    return formatDateTimeUtil(date);
   },
 
   /**
@@ -179,20 +163,8 @@ Page({
    * @param dateStr 日期时间字符串（格式：YYYY-MM-DDTHH:MM:SS）
    * @returns Date对象（解析失败返回null）
    */
-  parseDateTime(dateStr: string): Date | null {
-    if (!dateStr) return null;
-    const parts = dateStr.split(/[-T:]/);
-    if (parts.length >= 5) {
-      return new Date(
-        parseInt(parts[0]),
-        parseInt(parts[1]) - 1,
-        parseInt(parts[2]),
-        parseInt(parts[3]),
-        parseInt(parts[4]),
-        parts[5] ? parseInt(parts[5]) : 0
-      );
-    }
-    return null;
+  parseDateTimeStr(dateStr: string): Date | null {
+    return parseDateTime(dateStr);
   },
 
   // ==================== 生成选择器列数据（无限制） ====================
@@ -218,7 +190,7 @@ Page({
 
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
-    const daysInMonth = new Date(year, month, 0).getDate();
+    const daysInMonth = getDaysInMonth(year, month);
     const days: number[] = [];
     for (let d = 1; d <= daysInMonth; d++) days.push(d);
 
@@ -244,10 +216,10 @@ Page({
     let defaultDate: Date;
 
     if (currentTimeStr) {
-      const parsed = this.parseDateTime(currentTimeStr);
-      defaultDate = parsed ? new Date(parsed) : new Date(now);
+      const parsed = this.parseDateTimeStr(currentTimeStr);
+      defaultDate = parsed || now;
     } else {
-      defaultDate = new Date(now);
+      defaultDate = now;
     }
 
     const { years, months, days, hours, minutes } = this.generateAllColumns(defaultDate);
@@ -299,7 +271,7 @@ Page({
 
     if (newVal[0] !== pickerValue[0] || newVal[1] !== pickerValue[1]) {
       // 年份或月份改变，重新计算天数
-      const daysInMonth = new Date(year, month, 0).getDate();
+      const daysInMonth = getDaysInMonth(year, month);
       const days: number[] = [];
       for (let d = 1; d <= daysInMonth; d++) days.push(d);
 
@@ -323,7 +295,7 @@ Page({
     const month = months[pickerValue[1]];
 
     // 重新计算天数并修正索引
-    const daysInMonth = new Date(year, month, 0).getDate();
+    const daysInMonth = getDaysInMonth(year, month);
     const days: number[] = [];
     for (let d = 1; d <= daysInMonth; d++) days.push(d);
 
@@ -339,7 +311,7 @@ Page({
     const hour = hours[pickerValue[3]];
     const minute = minutes[pickerValue[4]];
     const selectedDate = new Date(year, month - 1, day, parseInt(hour), parseInt(minute), 0);
-    const finalValue = this.formatDateTime(selectedDate);
+    const finalValue = formatDateTimeForApi(selectedDate);
     const now = new Date();
 
     if (pickerType === 'start') {
@@ -350,7 +322,7 @@ Page({
 
       const endTimeStr = this.data.form.expectedEndTime;
       if (endTimeStr) {
-        const endTime = this.parseDateTime(endTimeStr);
+        const endTime = this.parseDateTimeStr(endTimeStr);
         if (endTime && selectedDate >= endTime) {
           this.setData({
             'form.expectedStartTime': finalValue,
@@ -375,7 +347,7 @@ Page({
         return;
       }
 
-      const startTime = this.parseDateTime(startTimeStr);
+      const startTime = this.parseDateTimeStr(startTimeStr);
       if (!startTime) {
         wx.showToast({ title: '请先选择有效的到达时间', icon: 'none' });
         return;
@@ -438,16 +410,11 @@ Page({
 
     const { visitorName, visitorIdCard, visitReason, expectedStartTime, expectedEndTime } = this.data.form;
 
-    // if (!intervieweeName.trim()) {
-    //   wx.showToast({ title: '请输入被访人姓名', icon: 'none' });
-    //   return;
-    // }
     if (!visitorName.trim()) {
       wx.showToast({ title: '请输入申请人姓名', icon: 'none' });
       return;
     }
-    const idCardRegex = /^[1-9]\d{5}(18|19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]$/;
-    if (!idCardRegex.test(visitorIdCard)) {
+    if (!validateIdCard(visitorIdCard)) {
       wx.showToast({ title: '请输入有效的18位身份证号', icon: 'none' });
       return;
     }
@@ -464,8 +431,8 @@ Page({
       return;
     }
 
-    const startDate = this.parseDateTime(expectedStartTime);
-    const endDate = this.parseDateTime(expectedEndTime);
+    const startDate = this.parseDateTimeStr(expectedStartTime);
+    const endDate = this.parseDateTimeStr(expectedEndTime);
     const now = new Date();
 
     if (!startDate || !endDate) {
@@ -514,9 +481,9 @@ Page({
         wx.switchTab({ url: '/pages/appointment/list' });
       }, 1500);
     })
-    .catch(err => {
+    .catch(() => {
       wx.hideLoading();
-      console.error('提交失败', err);
+      // request 拦截器已处理错误提示
     });
   }
 });

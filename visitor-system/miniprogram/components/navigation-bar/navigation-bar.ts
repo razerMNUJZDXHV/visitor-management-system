@@ -21,7 +21,7 @@ Component({
     },
     back: {
       type: Boolean,
-      value: true // 核心修改：默认显示返回按钮
+      value: true
     },
     loading: {
       type: Boolean,
@@ -55,20 +55,17 @@ Component({
   lifetimes: {
     attached() {
       const rect = wx.getMenuButtonBoundingClientRect()
-      wx.getSystemInfo({
-        success: (res) => {
-          const isAndroid = res.platform === 'android'
-          const isDevtools = res.platform === 'devtools'
-          this.setData({
-            ios: !isAndroid,
-            innerPaddingRight: `padding-right: ${res.windowWidth - rect.left}px`,
-            leftWidth: `width: ${res.windowWidth - rect.left}px`,
-            safeAreaTop: isDevtools || isAndroid 
-              ? `height: calc(44px + ${res.safeArea.top}px); padding-top: ${res.safeArea.top}px` 
-              : `height: calc(44px + ${res.safeArea.top}px); padding-top: ${res.safeArea.top}px`
-          })
-        }
-      })
+      const res = wx.getSystemInfoSync()
+      if (res) {
+        const isAndroid = res.platform === 'android'
+        const isDevtools = res.platform === 'devtools'
+        this.setData({
+          ios: !isAndroid,
+          innerPaddingRight: `padding-right: ${res.windowWidth - rect.left}px`,
+          leftWidth: `width: ${res.windowWidth - rect.left}px`,
+          safeAreaTop: `height: calc(44px + ${res.safeArea.top}px); padding-top: ${res.safeArea.top}px`
+        })
+      }
     }
   },
   methods: {

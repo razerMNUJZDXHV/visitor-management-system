@@ -23,8 +23,8 @@
               <div class="overview-item">
                 <div class="overview-label">通行类型</div>
                 <div class="overview-value">
-                  <el-tag :type="record.accessType === 1 ? 'success' : 'warning'" effect="light">
-                    {{ record.accessType === 1 ? '签到' : '签离' }}
+                  <el-tag :type="Number(record.accessType) === 1 ? 'success' : 'warning'" effect="light">
+                    {{ Number(record.accessType) === 1 ? '签到' : '签离' }}
                   </el-tag>
                 </div>
               </div>
@@ -63,8 +63,8 @@
               <el-descriptions :column="2" border class="detail-descriptions compact-descriptions">
                 <el-descriptions-item label="来访事由">{{ record.visitReason || '—' }}</el-descriptions-item>
                 <el-descriptions-item label="核验方式">
-                  <el-tag :type="record.verifyMethod === 1 ? '' : 'warning'" effect="light">
-                    {{ record.verifyMethod === 1 ? '扫码' : '手动' }}
+                  <el-tag :type="Number(record.verifyMethod) === 1 ? '' : 'warning'" effect="light">
+                    {{ Number(record.verifyMethod) === 1 ? '扫码' : '手动' }}
                   </el-tag>
                 </el-descriptions-item>
                 <el-descriptions-item label="紧急通行">
@@ -91,8 +91,8 @@
               <div class="meta-block status-block">
                 <div class="meta-label">通行类型</div>
                 <div class="meta-value">
-                  <el-tag :type="record.accessType === 1 ? 'success' : 'warning'" effect="light">
-                    {{ record.accessType === 1 ? '签到' : '签离' }}
+                  <el-tag :type="Number(record.accessType) === 1 ? 'success' : 'warning'" effect="light">
+                    {{ Number(record.accessType) === 1 ? '签到' : '签离' }}
                   </el-tag>
                 </div>
               </div>
@@ -134,21 +134,26 @@
 </template>
 
 <script setup>
+// 通行记录详情：展示通行信息并支持删除已完成记录。
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { deleteAccessRecord, fetchAccessRecordDetail } from '../api/access'
 import { formatDateTime } from '../utils/appointment'
 
+// 路由实例
 const route = useRoute()
 const router = useRouter()
 
+// 详情与删除状态
 const loading = ref(false)
 const deleting = ref(false)
 const record = ref({})
 
+// 是否允许删除：仅已完成的预约记录
 const canDelete = computed(() => Number(record.value.appointmentStatus) === 5)
 
+// 加载详情
 const loadDetail = async () => {
   const id = Number(route.params.id)
   if (!id) {
@@ -173,6 +178,7 @@ const loadDetail = async () => {
   }
 }
 
+// 删除记录
 const handleDelete = async () => {
   try {
     await ElMessageBox.confirm(`确认删除记录 #${record.value.logId} 吗？删除后不可恢复。`, '删除确认', {
@@ -201,10 +207,12 @@ const handleDelete = async () => {
   }
 }
 
+// 返回列表
 const goBack = () => {
   router.push('/access-record')
 }
 
+// 初始化加载
 onMounted(() => {
   loadDetail()
 })

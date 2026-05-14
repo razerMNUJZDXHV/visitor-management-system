@@ -1,8 +1,38 @@
-@import "../approver/history.less";
+@import "../common/common.less";
 
-.switch-label {
-  font-size: 24rpx;
-  color: #666;
+.search-bar {
+  background: #fff;
+  padding: 20rpx 32rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.search-input {
+  flex: 1;
+  height: 64rpx;
+  padding: 0 16rpx;
+  border: 1rpx solid #e8e8e8;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+}
+
+.search-btn {
+  flex: 0 0 auto;
+  height: 64rpx;
+  line-height: 64rpx;
+  padding: 0 24rpx;
+  font-size: 28rpx;
+  background: #1677ff;
+  color: #fff;
+  border-radius: 8rpx;
 }
 
 .picker-box {
@@ -16,14 +46,14 @@
   text-align: center;
 }
 
-/* switch 打开状态改为蓝色 */
-switch .wx-switch-input.wx-switch-input-checked {
-  background-color: #1677ff !important;
-  border-color: #1677ff !important;
+.range-sep {
+  font-size: 26rpx;
+  color: #666;
 }
 
 .dropdown {
   position: relative;
+  flex: 1;
 }
 
 .dropdown-menu {
@@ -53,64 +83,19 @@ switch .wx-switch-input.wx-switch-input-checked {
   color: #fff;
 }
 
-/* 级联选择 */
-.cascade-row {
-  display: flex;
-  max-height: 300rpx;
-  overflow: hidden;
-}
-
-.cascade-col {
-  flex: 1;
-  max-height: 300rpx;
-  overflow-y: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.cascade-col::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
-}
-
-.cascade-title {
-  height: 48rpx;
-  line-height: 48rpx;
-  text-align: center;
+.clear-btn {
   font-size: 26rpx;
-  color: #666;
-  font-weight: bold;
-  position: sticky;
-  top: 0;
-  background: #f5f5f5;
+  color: #999;
+  padding: 6rpx 0;
 }
 
-.cascade-item {
-  height: 56rpx;
-  line-height: 56rpx;
-  text-align: center;
+.switch-label {
   font-size: 24rpx;
-  color: #333;
+  color: #666;
 }
 
-.cascade-item.active {
-  background: #1677ff;
-  color: #fff;
-  border-radius: 6rpx;
-}
-
-.cascade-footer {
-  display: flex;
-  justify-content: center;
-  gap: 40rpx;
-  margin-top: 8rpx;
-  padding-top: 8rpx;
-  border-top: 1rpx solid #f0f0f0;
-}
-
-.cascade-footer text {
-  font-size: 26rpx;
-  color: #1677ff;
-  padding: 8rpx 16rpx;
+/* switch 打开状态改为蓝色 */
+switch .wx-switch-input.wx-switch-input-checked {
+  background-color: #1677ff !important;
+  border-color: #1677ff !important;
 }

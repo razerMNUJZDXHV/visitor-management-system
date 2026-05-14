@@ -1,4 +1,5 @@
 import { request } from '../../utils/request';
+import { calculateNavHeight, validateIdCard, validatePhone } from '../../utils/util';
 
 Page({
   data: {
@@ -14,10 +15,7 @@ Page({
   },
 
   onLoad() {
-    const systemInfo = wx.getSystemInfoSync();
-    const statusBarHeight = systemInfo.statusBarHeight || 20;
-    const navContentHeight = 44;
-    this.setData({ navHeight: statusBarHeight + navContentHeight });
+    this.setData({ navHeight: calculateNavHeight() });
   },
 
   onInput(e: { currentTarget: { dataset: { field: string } }; detail: { value: string } }) {
@@ -72,7 +70,7 @@ Page({
       wx.showToast({ title: '请填写访客手机号', icon: 'none' });
       return;
     }
-    if (!/^1[3-9]\d{9}$/.test(form.visitorPhone)) {
+    if (!validatePhone(form.visitorPhone)) {
       wx.showToast({ title: '请输入有效的11位手机号', icon: 'none' });
       return;
     }
@@ -80,8 +78,7 @@ Page({
       wx.showToast({ title: '请填写访客姓名', icon: 'none' });
       return;
     }
-    const idCardRegex = /^[1-9]\d{5}(18|19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]$/;
-    if (!idCardRegex.test(form.visitorIdCard)) {
+    if (!validateIdCard(form.visitorIdCard)) {
       wx.showToast({ title: '请输入有效的18位身份证号', icon: 'none' });
       return;
     }

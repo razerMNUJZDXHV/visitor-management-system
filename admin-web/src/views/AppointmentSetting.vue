@@ -108,33 +108,40 @@
 </template>
 
 <script setup>
+// 预约设置：配置预约上限、提示文案与开放规则。
 import { computed, onMounted, reactive, ref } from 'vue'
 import axios from '../api/axios'
 import { ElMessage } from 'element-plus'
+import { formatDateTime } from '../utils/appointment'
 
+// 表单与加载状态
 const formRef = ref(null)
 const loading = ref(false)
 const saving = ref(false)
 const updatedTimeText = ref('—')
 
+// 预约设置表单模型
 const form = reactive({
   notice: '',
   dailyLimit: 0,
   rules: []
 })
 
+// 表单校验规则
 const formRules = {
   notice: [
     { max: 300, message: '提示文案不能超过300个字符', trigger: 'blur' }
   ]
 }
 
+// 创建空规则（默认全时段关闭）
 const createEmptyRule = () => ({
   dateRange: ['', ''],
   timeRange: ['00:00', '23:59'],
   open: false
 })
 
+// 判断日期是否落在规则范围内
 const isDateInRange = (dateText, dateRange) => {
   if (!Array.isArray(dateRange) || dateRange.length !== 2 || !dateRange[0] || !dateRange[1]) {
     return false
@@ -142,11 +149,13 @@ const isDateInRange = (dateText, dateRange) => {
   return dateText >= dateRange[0] && dateText <= dateRange[1]
 }
 
+// 将 HH:mm 转换为分钟数
 const toMinutes = (timeText) => {
   const [hours, minutes] = (timeText || '').split(':')
   return Number(hours) * 60 + Number(minutes)
 }
 
+// 计算今日预约开放状态（用于顶部概览）
 const todayStatusText = computed(() => {
   const now = new Date()
   const year = now.getFullYear()
@@ -155,6 +164,7 @@ const todayStatusText = computed(() => {
   const todayText = `${year}-${month}-${day}`
   const currentMinutes = now.getHours() * 60 + now.getMinutes()
 
+  // 取出当天所有规则并按开始时间排序
   const todayRules = form.rules
     .filter(item => isDateInRange(todayText, item.dateRange))
     .map(item => ({
@@ -175,6 +185,7 @@ const todayStatusText = computed(() => {
   return hitRule.open ? '当前开放' : '当前关闭'
 })
 
+// 状态样式类
 const todayStatusClass = computed(() => {
   if (todayStatusText.value.includes('开放')) {
     return 'status-on'
@@ -185,29 +196,21 @@ const todayStatusClass = computed(() => {
   return ''
 })
 
-const formatDateTime = (value) => {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '—'
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hour = String(date.getHours()).padStart(2, '0')
-  const minute = String(date.getMinutes()).padStart(2, '0')
-  return `${year}-${month}-${day} ${hour}:${minute}`
-}
-
+// 新增规则
 const addRule = () => {
   form.rules.push(createEmptyRule())
 }
 
+// 删除规则
 const removeRule = (index) => {
   form.rules.splice(index, 1)
 }
 
+// 规则自检：范围完整性与重叠校验
 const validateRules = () => {
   for (let i = 0; i < form.rules.length; i++) {
     const item = form.rules[i]
+    // 日期范围完整性校验
     if (!Array.isArray(item.dateRange) || item.dateRange.length !== 2 || !item.dateRange[0] || !item.dateRange[1]) {
       ElMessage.error(`第 ${i + 1} 条规则缺少完整日期范围`)
       return false
@@ -216,6 +219,7 @@ const validateRules = () => {
       ElMessage.error(`第 ${i + 1} 条规则结束日期必须不早于开始日期`)
       return false
     }
+    // 时间段完整性校验
     if (!Array.isArray(item.timeRange) || item.timeRange.length !== 2 || !item.timeRange[0] || !item.timeRange[1]) {
       ElMessage.error(`第 ${i + 1} 条规则缺少完整时间段`)
       return false
@@ -232,7 +236,7 @@ const validateRules = () => {
     }
   }
 
-  // 检查规则重叠
+  // 检查规则重叠：日期范围 + 时间段同时重叠则判定冲突
   for (let i = 0; i < form.rules.length; i++) {
     for (let j = i + 1; j < form.rules.length; j++) {
       const a = form.rules[i]
@@ -251,12 +255,14 @@ const validateRules = () => {
   return true
 }
 
+// 加载预约设置
 const loadSetting = async () => {
   loading.value = true
   try {
     const res = await axios.get('/api/admin/appointment-setting')
     if (res.code === 200) {
       const data = res.data || {}
+      // 将接口结构映射为表格绑定结构
       form.notice = data.notice || ''
       form.dailyLimit = data.dailyLimit || 0
       form.rules = (data.rules || []).map(item => ({
@@ -277,10 +283,12 @@ const loadSetting = async () => {
   }
 }
 
+// 重置为服务端配置
 const handleReset = () => {
   loadSetting()
 }
 
+// 保存配置
 const handleSave = async () => {
   if (!formRef.value) return
 
@@ -288,6 +296,7 @@ const handleSave = async () => {
   if (!valid) return
   if (!validateRules()) return
 
+  // 将前端表格结构转换为接口结构
   const saveRules = form.rules.map(item => ({
     startDate: item.dateRange[0],
     endDate: item.dateRange[1],
@@ -317,6 +326,7 @@ const handleSave = async () => {
   }
 }
 
+// 初始化加载
 onMounted(() => {
   loadSetting()
 })

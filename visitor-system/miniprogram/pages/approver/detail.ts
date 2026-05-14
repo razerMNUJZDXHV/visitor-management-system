@@ -1,21 +1,18 @@
 import { request } from '../../utils/request';
+import { calculateNavHeight, formatDateTimeFromStr } from '../../utils/util';
 Page({
   data: {
     navHeight: 0,
     appointment: {} as any,
-    statusText: '待审批',
     showRejectInput: false,
     rejectReason: '',
     reasonLength: 0
   },
 
   onLoad(options: any) {
-    const systemInfo = wx.getSystemInfoSync();
-    const statusBarHeight = systemInfo.statusBarHeight || 20;
-    const navContentHeight = 44;
-    this.setData({ navHeight: statusBarHeight + navContentHeight });
+    this.setData({ navHeight: calculateNavHeight() });
   
-    const id = options.id ? parseInt(options.id) : null;
+    const id = options.id ? parseInt(options.id, 10) : null;
     if (!id) {
       wx.showToast({ title: '参数错误', icon: 'none' });
       setTimeout(() => wx.navigateBack(), 1500);
@@ -31,6 +28,9 @@ Page({
       method: 'GET'
     })
     .then(data => {
+      data.createTime = formatDateTimeFromStr(data.createTime);
+      data.expectedStartTime = formatDateTimeFromStr(data.expectedStartTime);
+      data.expectedEndTime = formatDateTimeFromStr(data.expectedEndTime);
       this.setData({ appointment: data });
     })
     .catch(err => {

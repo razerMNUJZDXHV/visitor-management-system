@@ -117,15 +117,15 @@
         <el-table-column prop="securityName" label="安保姓名" min-width="120" />
         <el-table-column label="核验方式" width="100" align="center">
           <template #default="scope">
-            <el-tag :type="scope.row.verifyMethod === 1 ? '' : 'warning'" effect="light">
-              {{ scope.row.verifyMethod === 1 ? '扫码' : '手动' }}
+            <el-tag :type="Number(scope.row.verifyMethod) === 1 ? '' : 'warning'" effect="light">
+              {{ Number(scope.row.verifyMethod) === 1 ? '扫码' : '手动' }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="通行类型" width="100" align="center">
           <template #default="scope">
-            <el-tag :type="scope.row.accessType === 1 ? 'success' : 'warning'" effect="light">
-              {{ scope.row.accessType === 1 ? '签到' : '签离' }}
+            <el-tag :type="Number(scope.row.accessType) === 1 ? 'success' : 'warning'" effect="light">
+              {{ Number(scope.row.accessType) === 1 ? '签到' : '签离' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -179,14 +179,18 @@
 </template>
 
 <script setup>
+// 通行记录管理：查询、导出、删除与筛选状态恢复。
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { batchDeleteAccessRecords, deleteAccessRecord, exportAccessRecords, fetchAccessRecords } from '../api/access'
 import { formatDateTime } from '../utils/appointment'
+import { downloadBlob } from '../utils/download'
 
+// 路由实例
 const router = useRouter()
 
+// 列表与筛选状态
 const loading = ref(false)
 const batchDeleting = ref(false)
 const exporting = ref(false)
@@ -201,8 +205,8 @@ const pageSize = ref(10)
 const selectedRows = ref([])
 
 // 统计计算
-const signInCount = computed(() => recordList.value.filter(item => item.accessType === 1).length)
-const signOutCount = computed(() => recordList.value.filter(item => item.accessType === 2).length)
+const signInCount = computed(() => recordList.value.filter(item => Number(item.accessType) === 1).length)
+const signOutCount = computed(() => recordList.value.filter(item => Number(item.accessType) === 2).length)
 const emergencyCount = computed(() => recordList.value.filter(item => item.emergency).length)
 
 // 分页列表
@@ -216,7 +220,7 @@ const canDelete = (row) => {
   return Number(row.appointmentStatus) === 5
 }
 
-// 加载记录
+// 加载记录（带筛选条件）
 const loadRecords = async () => {
   loading.value = true
   try {
@@ -252,11 +256,13 @@ const loadRecords = async () => {
   }
 }
 
+// 触发搜索
 const handleSearch = () => {
   currentPage.value = 1
   loadRecords()
 }
 
+// 重置筛选条件
 const handleReset = () => {
   keyword.value = ''
   dateRange.value = []
@@ -265,19 +271,6 @@ const handleReset = () => {
   emergencyOnly.value = false
   currentPage.value = 1
   loadRecords()
-}
-
-// 下载文件
-const downloadFile = (data, filename) => {
-  const blob = data instanceof Blob ? data : new Blob([data])
-  const url = window.URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  window.URL.revokeObjectURL(url)
 }
 
 // 按条件导出
@@ -296,7 +289,7 @@ const handleExportByCondition = async () => {
     }
     const blob = await exportAccessRecords(params)
     const fileDate = new Date().toISOString().slice(0, 10)
-    downloadFile(blob, `通行记录_${fileDate}.xlsx`)
+    downloadBlob(blob, `通行记录_${fileDate}.xlsx`)
     ElMessage.success('导出成功')
   } catch (error) {
     console.error('导出失败：', error)
@@ -306,10 +299,12 @@ const handleExportByCondition = async () => {
   }
 }
 
+// 勾选记录变化
 const handleSelectionChange = (selection) => {
   selectedRows.value = selection
 }
 
+// 进入详情并缓存筛选条件
 const goDetail = (row) => {
   // 保存当前筛选状态到 sessionStorage
   const filterState = {
@@ -326,6 +321,7 @@ const goDetail = (row) => {
   router.push(`/access-record-detail/${row.logId}`)
 }
 
+// 删除单条记录
 const handleDelete = async (row) => {
   try {
     await ElMessageBox.confirm(`确认删除记录 #${row.logId} 吗？删除后不可恢复。`, '删除确认', {
@@ -351,6 +347,7 @@ const handleDelete = async (row) => {
   }
 }
 
+// 批量删除记录
 const handleBatchDelete = async () => {
   const rows = selectedRows.value
   if (rows.length === 0) {
@@ -393,11 +390,13 @@ const handleBatchDelete = async () => {
   }
 }
 
+// 分页大小变化
 const handleSizeChange = (size) => {
   pageSize.value = size
   currentPage.value = 1
 }
 
+// 页码变化
 const handleCurrentChange = (page) => {
   currentPage.value = page
 }
@@ -410,6 +409,7 @@ watch(recordList, (list) => {
   }
 })
 
+// 初始化：恢复筛选状态并加载记录
 onMounted(() => {
   // 恢复筛选状态
   const savedFilter = sessionStorage.getItem('accessRecordFilter')

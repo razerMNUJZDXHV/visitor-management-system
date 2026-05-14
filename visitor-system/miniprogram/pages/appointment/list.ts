@@ -1,4 +1,5 @@
 import { request } from '../../utils/request';
+import { calculateNavHeight, formatDateTime as formatDateTimeUtil, formatFullDateTime as formatFullDateTimeUtil, getStatusText as getStatusTextUtil, getStatusClass as getStatusClassUtil } from '../../utils/util';
 
 const QR_GRACE_MINUTES = 30;
 const EXPIRE_REMIND_BEFORE_MINUTES = 5;
@@ -29,11 +30,7 @@ Page({
   },
 
   onLoad() {
-    const systemInfo = wx.getSystemInfoSync();
-    const statusBarHeight = systemInfo.statusBarHeight || 20;
-    const navContentHeight = 44;
-    const totalNavHeight = statusBarHeight + navContentHeight;
-    this.setData({ navHeight: totalNavHeight });
+    this.setData({ navHeight: calculateNavHeight() });
   },
 
   onShow() {
@@ -55,12 +52,12 @@ Page({
       const missedCount = data.missedCount || 0;
       this.setData({
         bannedUntil,
-        bannedUntilText: bannedUntil ? this.formatFullDateTime(new Date(bannedUntil)) : '',
+        bannedUntilText: bannedUntil ? this.formatFullDateTime(bannedUntil) : '',
         missedCount
       });
     })
     .catch(err => {
-      console.error('获取用户封禁状态失败', err);
+      // 静默处理，避免打扰用户
     });
   },
 
@@ -204,49 +201,21 @@ Page({
 
   // 状态文本映射
   getStatusText(status: number): string {
-    const map: Record<number, string> = {
-      0: '待审核',
-      1: '预约成功',
-      2: '预约失败',
-      3: '已取消',
-      4: '已签到',
-      5: '已完成',
-      6: '已过期'
-    };
-    return map[status] || '未知';
+    return getStatusTextUtil(status);
   },
 
   getStatusClass(status: number): string {
-    const map: Record<number, string> = {
-      0: 'status-pending',
-      1: 'status-success',
-      2: 'status-fail',
-      3: 'status-cancel',
-      4: 'status-checkin',
-      5: 'status-complete',
-      6: 'status-expire'
-    };
-    return map[status] || '';
+    return getStatusClassUtil(status);
   },
 
   // 格式化完整日期时间 (YYYY-MM-DD HH:mm)
   formatDateTime(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hour = String(date.getHours()).padStart(2, '0');
-    const minute = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hour}:${minute}`;
+    return formatDateTimeUtil(date);
   },
 
   // 格式化日期
   formatFullDateTime(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hour = String(date.getHours()).padStart(2, '0');
-    const minute = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hour}:${minute}`;
+    return formatFullDateTimeUtil(date);
   },
 
   // 阻止弹窗背景滚动
@@ -335,7 +304,7 @@ Page({
             })
             .catch(err => {
               wx.hideLoading();
-              console.error('取消失败', err);
+              // request 拦截器已处理错误提示
             });
         }
       }

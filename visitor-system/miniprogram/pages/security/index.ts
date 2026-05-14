@@ -1,4 +1,5 @@
 import { request } from '../../utils/request';
+import { calculateNavHeight, formatDateTimeFromStr } from '../../utils/util';
 
 type VerifyResult = {
   passed: boolean;
@@ -46,6 +47,7 @@ let alertPollTimer: number | null = null;
 Page({
   data: {
     navHeight: 0,
+    securityName: '安保人员',
     latestVerify: null as VerifyResult | null,
     pendingVerify: null as VerifyResult | null,
     showVerifyConfirm: false,
@@ -57,10 +59,12 @@ Page({
   },
 
   onLoad() {
-    const systemInfo = wx.getSystemInfoSync();
-    const statusBarHeight = systemInfo.statusBarHeight || 20;
-    const navContentHeight = 44;
-    this.setData({ navHeight: statusBarHeight + navContentHeight });
+    const userInfo = wx.getStorageSync('userInfo') || {};
+    const realName = wx.getStorageSync('realName') || '';
+    this.setData({
+      navHeight: calculateNavHeight(),
+      securityName: realName || userInfo.realName || '安保人员'
+    });
   },
 
   onShow() {
@@ -233,10 +237,7 @@ Page({
   },
 
   formatDateTime(value?: string) {
-    if (!value) {
-      return '—';
-    }
-    return value.replace('T', ' ').slice(0, 16);
+    return formatDateTimeFromStr(value);
   },
 
   getAlertTypeText(type?: string) {
@@ -286,7 +287,7 @@ Page({
         }
       }
     }).catch(() => {
-      this.setData({ alerts: [] });
+      // 保留原有告警，避免网络波动时界面突然清空
     });
   }
 });

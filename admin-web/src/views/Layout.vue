@@ -3,7 +3,7 @@
     <!-- 顶部导航栏 -->
     <el-header class="header">
       <div class="header-left"></div>
-      <div class="header-title">应急管理大学访客预约与准入管理系统</div>
+      <div class="header-title">基于微信小程序的应急管理大学访客预约与准入管理系统</div>
       <div class="header-right" v-if="isLoggedIn">
         <span class="user-name">管理员 {{ userInfo?.realName || '' }}</span>
         <el-button type="primary" @click="handleLogout">退出登录</el-button>
@@ -41,40 +41,46 @@
 </template>
 
 <script setup>
-import { ref, onMounted, provide, watch } from 'vue' // 确保引入 onMounted
+// 管理端布局：顶部导航 + 左侧菜单 + 内容区域。
+import { ref, onMounted, provide, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute()
 
-// ==================== 修复全局响应式状态初始化（核心修复） ====================
-// 1. isLoggedIn：直接从 localStorage 读取并初始化
+// 是否已登录（基于本地 token 初始化）
 const isLoggedIn = ref(!!localStorage.getItem('token'))
 
-// 2. userInfo：直接从 localStorage 读取并解析，不要传函数给 ref！
+// 读取本地用户信息，避免 JSON 解析异常影响渲染
 const initUserInfo = () => {
   const info = localStorage.getItem('userInfo')
-  return info ? JSON.parse(info) : {}
+  if (!info) return {}
+  try {
+    return JSON.parse(info)
+  } catch (error) {
+    console.warn('Invalid userInfo in localStorage:', error)
+    return {}
+  }
 }
 const userInfo = ref(initUserInfo())
 
-// 将状态 provide 给子组件
+// 通过 provide 共享登录态与用户信息
 provide('globalState', {
   isLoggedIn,
   userInfo
 })
 
-// ==================== 样式配置 ====================
+// 主题色配置（供样式绑定使用）
 const headerBgColor = '#2c3e50'
 const menuBgColor = '#34495e'
 const menuTextColor = '#ecf0f1'
 const menuActiveTextColor = '#fff'
 
-// ==================== 菜单相关 ====================
-// 监听路由变化，自动更新高亮菜单
+// 当前高亮菜单项
 const activeMenu = ref('dashboard')
 
+// 根据路由解析当前菜单高亮项
 const resolveActiveMenu = () => {
   if (route.name === 'ApprovalDetail') {
     return 'approval-center'
@@ -87,6 +93,7 @@ const resolveActiveMenu = () => {
   return firstSegment || 'dashboard'
 }
 
+// 监听路由变化，自动更新高亮菜单
 watch(
   () => [route.path, route.name, route.query.mode],
   () => {
@@ -95,12 +102,13 @@ watch(
   { immediate: true }
 )
 
-// 同步 localStorage 状态（刷新时保险）
+// 刷新页面时再次同步本地缓存状态
 onMounted(() => {
   isLoggedIn.value = !!localStorage.getItem('token')
   userInfo.value = initUserInfo()
 })
 
+// 侧边菜单点击：未登录拦截，已登录跳转路由
 const handleMenuSelect = (index) => {
   if (!isLoggedIn.value && index !== 'dashboard') {
     ElMessage.warning('请先登录后再操作')
@@ -110,7 +118,7 @@ const handleMenuSelect = (index) => {
   router.push(`/${index}`)
 }
 
-// ==================== 退出登录（同步更新） ====================
+// 退出登录：清理缓存并回到首页
 const handleLogout = () => {
   localStorage.removeItem('token')
   localStorage.removeItem('userInfo')

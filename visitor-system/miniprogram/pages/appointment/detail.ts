@@ -1,4 +1,5 @@
 import { request } from '../../utils/request';
+import { calculateNavHeight, formatDateTimeFromStr, getStatusText as getStatusTextUtil, getStatusClass as getStatusClassUtil } from '../../utils/util';
 
 Page({
   data: {
@@ -11,10 +12,7 @@ Page({
   },
 
   onLoad(options: any) {
-    const systemInfo = wx.getSystemInfoSync();
-    const statusBarHeight = systemInfo.statusBarHeight || 20;
-    const navContentHeight = 44;
-    this.setData({ navHeight: statusBarHeight + navContentHeight });
+    this.setData({ navHeight: calculateNavHeight() });
 
     const id = options.id;
     this.loadDetail(id);
@@ -28,6 +26,9 @@ Page({
     })
       .then(data => {
         const notice = this.buildOverstayNotice(data);
+        data.createTime = formatDateTimeFromStr(data.createTime);
+        data.expectedStartTime = formatDateTimeFromStr(data.expectedStartTime);
+        data.expectedEndTime = formatDateTimeFromStr(data.expectedEndTime);
         this.setData({
           appointment: data,
           statusText: this.getStatusText(data.status),
@@ -77,29 +78,11 @@ Page({
   },
 
   getStatusText(status: number): string {
-    const map: Record<number, string> = {
-      0: '待审核',
-      1: '预约成功',
-      2: '预约失败',
-      3: '已取消',
-      4: '已签到',
-      5: '已完成',
-      6: '已过期'
-    };
-    return map[status] || '未知';
+    return getStatusTextUtil(status);
   },
 
   getStatusClass(status: number): string {
-    const map: Record<number, string> = {
-      0: 'status-pending',
-      1: 'status-success',
-      2: 'status-fail',
-      3: 'status-cancel',
-      4: 'status-checkin',
-      5: 'status-complete',
-      6: 'status-expire'
-    };
-    return map[status] || '';
+    return getStatusClassUtil(status);
   },
 
   goBack() {

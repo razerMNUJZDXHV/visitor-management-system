@@ -111,15 +111,19 @@
 </template>
 
 <script setup>
+// 统计分析：展示概览、饼图与趋势图。
 import { onMounted, onBeforeUnmount, ref, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { fetchAdminStats } from '../api/stats'
 
+// 加载状态
 const loading = ref(false)
 const chartsLoading = ref(false)
+// 统计维度
 const days = ref(7)
 const hourlyType = ref('day') // 时段流量类型：day/week/month
+// 统计数据模型
 const stats = ref({
   todayFlow: 0,
   todaySignIn: 0,
@@ -143,15 +147,18 @@ const stats = ref({
   allHourlyFlow: []
 })
 
+// 图表 DOM 引用
 const dailyChartRef = ref(null)
 const statusChartRef = ref(null)
 const hourlyChartRef = ref(null)
 const emergencyChartRef = ref(null)
+// 图表实例
 let dailyChart = null
 let statusChart = null
 let hourlyChart = null
 let emergencyChart = null
 
+// 拉取统计数据并更新图表
 const loadStats = async () => {
   loading.value = true
   chartsLoading.value = true
@@ -176,26 +183,31 @@ const loadStats = async () => {
   }
 }
 
+// 初始化日趋势图实例
 const initDailyChart = () => {
   if (!dailyChartRef.value) return
   dailyChart = echarts.init(dailyChartRef.value)
 }
 
+// 初始化状态饼图实例
 const initStatusChart = () => {
   if (!statusChartRef.value) return
   statusChart = echarts.init(statusChartRef.value)
 }
 
+// 初始化紧急通行饼图实例
 const initEmergencyChart = () => {
   if (!emergencyChartRef.value) return
   emergencyChart = echarts.init(emergencyChartRef.value)
 }
 
+// 初始化时段分布柱图实例
 const initHourlyChart = () => {
   if (!hourlyChartRef.value) return
   hourlyChart = echarts.init(hourlyChartRef.value)
 }
 
+// 更新日趋势图
 const updateDailyChart = () => {
   if (!dailyChart) return
   const flow = stats.value.dailyFlow || []
@@ -261,6 +273,7 @@ const updateDailyChart = () => {
   })
 }
 
+// 更新状态分布饼图
 const updateStatusChart = () => {
   if (!statusChart) return
   const {
@@ -366,6 +379,7 @@ const updateStatusChart = () => {
   })
 }
 
+// 更新紧急通行占比饼图
 const updateEmergencyChart = () => {
   if (!emergencyChart) return
   const emergency = stats.value.totalEmergency || 0
@@ -458,6 +472,7 @@ const updateEmergencyChart = () => {
   })
 }
 
+// 更新时段分布柱图
 const updateHourlyChart = () => {
   if (!hourlyChart) return
 
@@ -534,6 +549,7 @@ const updateHourlyChart = () => {
   })
 }
 
+// 统一更新全部图表
 const updateCharts = () => {
   updateDailyChart()
   updateStatusChart()
@@ -541,6 +557,7 @@ const updateCharts = () => {
   updateHourlyChart()
 }
 
+// 仅刷新日趋势图（避免全量重绘）
 const updateDailyChartOnly = async () => {
   loading.value = true
   chartsLoading.value = true
@@ -566,6 +583,7 @@ const updateDailyChartOnly = async () => {
   }
 }
 
+// 窗口变化时重绘图表
 const handleResize = () => {
   dailyChart?.resize()
   statusChart?.resize()
@@ -573,6 +591,7 @@ const handleResize = () => {
   hourlyChart?.resize()
 }
 
+// 初始化图表与数据
 onMounted(() => {
   initDailyChart()
   initStatusChart()
@@ -582,6 +601,7 @@ onMounted(() => {
   window.addEventListener('resize', handleResize)
 })
 
+// 释放资源
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
   dailyChart?.dispose()

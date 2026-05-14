@@ -1,18 +1,29 @@
 <navigation-bar id="navBar" title="安保工作台" />
 
 <view class="page-container" style="padding-top: {{navHeight}}px;">
-  <scroll-view class="content-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-    <view class="work-card">
-      <view class="work-title">身份核验</view>
-      <view class="work-actions">
-        <button class="primary-btn" bindtap="handleScanVerify">扫码核验</button>
-        <button class="plain-btn" bindtap="goManualRegister">手动登记</button>
-      </view>
+  <!-- 顶部欢迎卡片（固定） -->
+  <view class="welcome-card">
+    <view class="welcome-row">
+      <text class="welcome-text">欢迎，安保：{{securityName}}</text>
     </view>
+  </view>
 
-    <view class="alert-card" wx:if="{{alerts.length > 0}}">
-      <view class="section-title">实时告警</view>
-      <view class="alert-item" wx:for="{{alerts}}" wx:key="index" bindtap="handleAlertTap" data-index="{{index}}">
+  <!-- 身份核验模块（固定） -->
+  <view class="work-card">
+    <view class="work-title">身份核验</view>
+    <view class="work-actions">
+      <button class="primary-btn" bindtap="handleScanVerify">扫码核验</button>
+      <button class="plain-btn" bindtap="goManualRegister">手动登记</button>
+    </view>
+  </view>
+
+  <!-- 实时告警模块（白色卡片） -->
+  <view class="alert-card" wx:if="{{alerts.length > 0}}">
+    <view class="alert-header">
+      <text class="section-title">实时告警</text>
+    </view>
+    <scroll-view class="alert-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+      <view class="alert-item" wx:for="{{alerts}}" wx:key="appointmentId-alertType" bindtap="handleAlertTap" data-index="{{index}}">
         <view class="alert-line">
           <text class="alert-type {{item.alertType === 'OVERTIME_EXPIRED' ? 'danger' : 'warn'}}">{{item.alertTypeText}}</text>
           <text class="alert-time">{{item.occurredAtText}}</text>
@@ -26,21 +37,8 @@
         </view>
         <text class="alert-link">查看详情 ></text>
       </view>
-    </view>
-
-    <view class="verify-card" wx:if="{{latestVerify}}">
-      <view class="section-title">最近一次核验结果</view>
-      <view class="info-row"><text class="label">核验状态：</text>{{latestVerify.passed ? '通过' : '未通过'}}</view>
-      <view class="info-row"><text class="label">访客姓名：</text>{{latestVerify.visitorName || '—'}}</view>
-      <view class="info-row"><text class="label">手机号：</text>{{latestVerify.visitorPhone || '—'}}</view>
-      <view class="info-row"><text class="label">身份证号：</text>{{latestVerify.visitorIdCard || '—'}}</view>
-      <view class="info-row"><text class="label">提示：</text>{{latestVerify.alertMessage || '无'}}</view>
-    </view>
-
-    <view class="quick-link" bindtap="goHistory">
-      <text>查看通行记录 ></text>
-    </view>
-  </scroll-view>
+    </scroll-view>
+  </view>
 
   <view class="verify-modal" wx:if="{{showVerifyConfirm}}" catchtouchmove="preventMove">
     <view class="alert-mask" bindtap="closeVerifyConfirm"></view>
@@ -70,8 +68,7 @@
       <view class="detail-row" wx:if="{{selectedAlert.alertType !== 'EMERGENCY_REGISTERED'}}"><text class="label">预计到达：</text>{{selectedAlert.expectedStartTimeText || '—'}}</view>
       <view class="detail-row" wx:if="{{selectedAlert.alertType !== 'EMERGENCY_REGISTERED'}}"><text class="label">预计离开：</text>{{selectedAlert.expectedEndTimeText || '—'}}</view>
       <view class="detail-row" wx:if="{{selectedAlert.alertType !== 'EMERGENCY_REGISTERED'}}"><text class="label">通行码过期：</text>{{selectedAlert.graceExpireTimeText || '—'}}</view>
-      <view class="detail-row" wx:if="{{selectedAlert.alertType !== 'EMERGENCY_REGISTERED'}}"><text class="label">来访事由：</text>{{selectedAlert.visitReason || '—'}}</view>
-      <view class="detail-row" wx:if="{{selectedAlert.alertType === 'EMERGENCY_REGISTERED'}}"><text class="label">来访事由：</text>{{selectedAlert.visitReason || '—'}}</view>
+      <view class="detail-row"><text class="label">来访事由：</text>{{selectedAlert.visitReason || '—'}}</view>
 
       <view class="detail-message">{{selectedAlert.message || '—'}}</view>
 

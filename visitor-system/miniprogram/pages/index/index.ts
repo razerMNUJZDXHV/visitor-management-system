@@ -70,6 +70,7 @@ Page({
         phone: string | null;
         realName: string | null;
         token: string;
+        refreshToken: string;
       }>({
         url: '/api/wx/user/login',
         method: 'POST',
@@ -84,6 +85,7 @@ Page({
 
       // 保存用户信息
       wx.setStorageSync('token', loginRes.token);
+      wx.setStorageSync('refreshToken', loginRes.refreshToken);
       wx.setStorageSync('userId', loginRes.userId);
       wx.setStorageSync('openid', loginRes.openid);
       wx.setStorageSync('userType', loginRes.userType);
@@ -95,7 +97,6 @@ Page({
       this.redirectByUserType(loginRes.userType);
     } catch (err: any) {
       wx.hideLoading();
-      console.error('登录失败', err);
       // 不重复弹窗，request 已提示
     }
   },

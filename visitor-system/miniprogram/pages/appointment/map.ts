@@ -1,3 +1,6 @@
+import { calculateNavHeight } from '../../utils/util';
+import { TX_MAP_API_KEY } from '../../utils/config';
+
 // 定义地图标记点类型
 interface Marker {
   id: number;
@@ -28,6 +31,7 @@ interface Polyline {
   points: PolylinePoint[];
   color: string;
   width: number;
+  arrowLine?: boolean;
 }
 
 // 定义页面 data 类型
@@ -44,9 +48,11 @@ interface PageData {
 // 自定义方法接口
 interface PageCustom {
   handleBuildingTap(e: any): void;
+  handleMarkerTap(e: any): void;
   decodePolyline(polyline: string): PolylinePoint[];
   moveToMyLocation(): void;
   initMarkers(): void;
+  selectBuilding(building: any): void;
 }
 
 Page<PageData, PageCustom>({
@@ -70,11 +76,7 @@ Page<PageData, PageCustom>({
 
   onLoad() {
     // 计算导航栏高度
-    const systemInfo = wx.getSystemInfoSync();
-    const statusBarHeight = systemInfo.statusBarHeight || 20;
-    const navContentHeight = 44;
-    const totalNavHeight = statusBarHeight + navContentHeight;
-    this.setData({ navHeight: totalNavHeight });
+    this.setData({ navHeight: calculateNavHeight() });
 
     this.initMarkers();
     this.moveToMyLocation();
@@ -99,7 +101,6 @@ Page<PageData, PageCustom>({
       type: 'gcj02',
       isHighAccuracy: true,  // 启用高精度定位
       success: (res) => {
-        console.log('定位成功：', res.longitude, res.latitude);
         this.setData({
           longitude: res.longitude,
           latitude: res.latitude,
@@ -111,8 +112,7 @@ Page<PageData, PageCustom>({
           latitude: res.latitude
         });
       },
-      fail: (err) => {
-        console.error('定位失败：', err);
+      fail: () => {
         wx.showToast({
           title: '请开启手机定位权限',
           icon: 'none'
@@ -129,40 +129,57 @@ Page<PageData, PageCustom>({
     }, 500);
   },
 
+  /**
+ * 处理地图标记点击事件
+ * @param {any} e - 点击事件对象，包含被点击标记的 ID
+ */
+handleMarkerTap(e: any) {
+    const markerId = e.detail.markerId;
+    const building = this.data.buildings.find(item => item.id === markerId);
+    if (building) {
+      this.selectBuilding(building);
+    }
+  },
+
+  selectBuilding(building: any) {
+    const mapCtx = wx.createMapContext('myMap');
+    mapCtx.moveToLocation({
+      longitude: building.longitude,
+      latitude: building.latitude
+    });
+    // 路径规划
+    wx.getLocation({
+      type: 'gcj02',
+      success: (locRes) => {
+        const start = `${locRes.longitude},${locRes.latitude}`;
+        const end = `${building.longitude},${building.latitude}`;
+        wx.request({
+          url: `https://apis.map.qq.com/ws/direction/v1/walking/?from=${start}&to=${end}&key=${TX_MAP_API_KEY}`,
+          method: 'GET',
+          success: (mapRes: any) => {
+            if (mapRes.data.status === 0) {
+              const polylineStr = mapRes.data.result.routes[0].polyline;
+              const points = this.decodePolyline(polylineStr);
+              this.setData({
+                polyline: [{
+                  points: points,
+                  color: '#3B82F6',
+                  width: 4,
+                  arrowLine: true
+                }]
+              });
+            }
+          }
+        });
+      }
+    });
+  },
+
   handleBuildingTap(e: any) {
     const buildingId = e.currentTarget.dataset.id;
     const building = this.data.buildings.find(item => item.id === buildingId);
     if (building) {
-      const mapCtx = wx.createMapContext('myMap');
-      mapCtx.moveToLocation({
-        longitude: building.longitude,
-        latitude: building.latitude
-      });
-      // 路径规划
-      wx.getLocation({
-        type: 'gcj02',
-        success: (res) => {
-          const start = `${res.longitude},${res.latitude}`;
-          const end = `${building.longitude},${building.latitude}`;
-          wx.request({
-            url: `https://apis.map.qq.com/ws/direction/v1/walking/?from=${start}&to=${end}&key=R2XBZ-MY56J-QN6FJ-XPSJD-QTNV2-BXBRA`,
-            method: 'GET',
-            success: (res: any) => {
-              if (res.data.status === 0) {
-                const polylineStr = res.data.result.routes[0].polyline;
-                const points = this.decodePolyline(polylineStr);
-                this.setData({
-                  polyline: [{
-                    points: points,
-                    color: '#1677ff',
-                    width: 4
-                  }]
-                });
-              }
-            }
-          });
-        }
-      });
+      this.selectBuilding(building);
     }
   },
 

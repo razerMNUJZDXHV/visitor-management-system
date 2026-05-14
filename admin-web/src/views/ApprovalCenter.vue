@@ -57,7 +57,7 @@
               />
             </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="pendingPage = 1">搜索</el-button>
+          <el-button type="primary" @click="handlePendingSearch">搜索</el-button>
           <el-button @click="handlePendingReset">重置</el-button>
         </el-form-item>
           </el-form>
@@ -232,16 +232,21 @@
 </template>
 
 <script setup>
+// 审批中心：待审批/历史记录查询、导出与删除。
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { batchDeleteApprovalRecords, deleteApprovalRecord, exportApprovalHistory, fetchApprovalHistory, fetchPendingAppointments } from '../api/approval'
 import { formatDateOnly, mapAppointment } from '../utils/appointment'
+import { downloadBlob } from '../utils/download'
 
+// 路由实例
 const route = useRoute()
 const router = useRouter()
+// 允许删除的状态码
 const DELETABLE_STATUS = [2, 3, 5, 6]
 
+// 视图状态与筛选条件
 const activeTab = ref(route.query.tab === 'history' ? 'history' : 'pending')
 const pendingLoading = ref(false)
 const historyLoading = ref(false)
@@ -261,6 +266,7 @@ const selectedHistoryRows = ref([])
 const batchDeleting = ref(false)
 const historyExporting = ref(false)
 
+// 待审批筛选（前端关键字过滤）
 const filteredPendingList = computed(() => {
   const searchText = pendingKeyword.value.trim().toLowerCase()
   if (!searchText) return pendingList.value
@@ -271,22 +277,28 @@ const filteredPendingList = computed(() => {
   })
 })
 
+// 待审批总数（用于分页）
 const pendingTotal = computed(() => filteredPendingList.value.length)
 
+// 待审批分页结果
 const paginatedPendingList = computed(() => {
   const start = (pendingPage.value - 1) * pendingPageSize.value
   return filteredPendingList.value.slice(start, start + pendingPageSize.value)
 })
 
+// 历史总数（用于分页）
 const historyTotal = computed(() => historyList.value.length)
 
+// 历史分页结果
 const paginatedHistoryList = computed(() => {
   const start = (historyPage.value - 1) * historyPageSize.value
   return historyList.value.slice(start, start + historyPageSize.value)
 })
 
+// 已拒绝数量
 const rejectedCount = computed(() => historyList.value.filter((item) => Number(item.status) === 2).length)
 
+// 拉取待审批列表
 const loadPendingList = async () => {
   pendingLoading.value = true
   try {
@@ -304,6 +316,7 @@ const loadPendingList = async () => {
   }
 }
 
+// 拉取审批历史列表（含筛选条件）
 const loadHistoryList = async () => {
   historyLoading.value = true
   try {
@@ -337,18 +350,7 @@ const loadHistoryList = async () => {
   }
 }
 
-const downloadFile = (data, filename) => {
-  const blob = data instanceof Blob ? data : new Blob([data])
-  const url = window.URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  window.URL.revokeObjectURL(url)
-}
-
+// 按条件导出审批历史
 const handleHistoryExport = async () => {
   if (historyExporting.value) return
   historyExporting.value = true
@@ -364,7 +366,7 @@ const handleHistoryExport = async () => {
 
     const res = await exportApprovalHistory(params)
     const fileDate = formatDateOnly(new Date()) || '导出'
-    downloadFile(res, `审批记录_${fileDate}.xlsx`)
+    downloadBlob(res, `审批记录_${fileDate}.xlsx`)
     ElMessage.success('审批记录已导出')
   } catch (error) {
     console.error('导出审批记录失败：', error)
@@ -374,25 +376,35 @@ const handleHistoryExport = async () => {
   }
 }
 
+// 刷新两类列表
 const reloadAll = async () => {
   await Promise.all([loadPendingList(), loadHistoryList()])
 }
 
+// 触发待审批关键字筛选
 const handlePendingSearch = () => {
   pendingPage.value = 1
-  loadPendingList()
+  if (pendingList.value.length === 0) {
+    loadPendingList()
+  }
 }
 
+// 重置待审批关键字筛选
 const handlePendingReset = () => {
   pendingKeyword.value = ''
   pendingPage.value = 1
+  if (pendingList.value.length === 0) {
+    loadPendingList()
+  }
 }
 
+// 触发历史筛选
 const handleHistorySearch = () => {
   historyPage.value = 1
   loadHistoryList()
 }
 
+// 重置历史筛选
 const handleHistoryReset = () => {
   historySearchType.value = 'create'
   historyDateRange.value = []
@@ -403,6 +415,7 @@ const handleHistoryReset = () => {
   loadHistoryList()
 }
 
+// 构造详情页返回路径（保留筛选条件）
 const buildReturnPath = () => {
   const query = { tab: activeTab.value }
   if (activeTab.value === 'history') {
@@ -414,6 +427,7 @@ const buildReturnPath = () => {
   return router.resolve({ path: '/approval-center', query }).fullPath
 }
 
+// 同步筛选状态到路由 query，便于刷新恢复
 const syncRouteQuery = () => {
   const query = { tab: activeTab.value }
   if (activeTab.value === 'history') {
@@ -429,24 +443,29 @@ const syncRouteQuery = () => {
   }
 }
 
+// 待审批分页大小变化
 const handlePendingSizeChange = (size) => {
   pendingPageSize.value = size
   pendingPage.value = 1
 }
 
+// 待审批页码变化
 const handlePendingCurrentChange = (page) => {
   pendingPage.value = page
 }
 
+// 历史分页大小变化
 const handleHistorySizeChange = (size) => {
   historyPageSize.value = size
   historyPage.value = 1
 }
 
+// 历史页码变化
 const handleHistoryCurrentChange = (page) => {
   historyPage.value = page
 }
 
+// 跳转详情并缓存筛选条件
 const goDetail = (item, mode) => {
   // 保存当前筛选状态到 sessionStorage
   const filterState = {
@@ -471,14 +490,17 @@ const goDetail = (item, mode) => {
   })
 }
 
+// 判断是否可删除记录
 const canDeleteRecord = (status) => {
   return DELETABLE_STATUS.includes(Number(status))
 }
 
+// 勾选记录变化
 const handleHistorySelectionChange = (selection) => {
   selectedHistoryRows.value = selection
 }
 
+// 删除单条历史记录
 const handleDeleteRecord = async (item) => {
   try {
     await ElMessageBox.confirm(`确认删除预约 #${item.appointmentId} 吗？删除后不可恢复。`, '删除确认', {
@@ -504,6 +526,7 @@ const handleDeleteRecord = async (item) => {
   }
 }
 
+// 批量删除历史记录
 const handleBatchDelete = async () => {
   const rows = selectedHistoryRows.value
   if (rows.length === 0) {
@@ -546,6 +569,7 @@ const handleBatchDelete = async () => {
   }
 }
 
+// 状态标签类型映射
 const getStatusTagType = (status) => {
   const value = Number(status)
   if (value === 1) return 'success'
@@ -560,6 +584,7 @@ const getStatusTagType = (status) => {
 watch(
   () => route.query.tab,
   (tab) => {
+    // URL 参数变化时同步标签页
     activeTab.value = tab === 'history' ? 'history' : 'pending'
   },
   { immediate: true }
@@ -568,6 +593,7 @@ watch(
 watch(
   () => route.query.scope,
   (scope) => {
+    // URL 参数变化时同步范围筛选
     historyScope.value = scope === 'mine' ? 'mine' : 'all'
   },
   { immediate: true }
@@ -576,6 +602,7 @@ watch(
 watch(
   () => route.query.pPage,
   (pPage) => {
+    // URL 参数变化时同步待审批页码
     const page = Number(pPage)
     if (Number.isFinite(page) && page > 0) {
       pendingPage.value = page
@@ -586,6 +613,7 @@ watch(
 watch(
   () => route.query.hPage,
   (hPage) => {
+    // URL 参数变化时同步历史页码
     const page = Number(hPage)
     if (Number.isFinite(page) && page > 0) {
       historyPage.value = page
@@ -594,6 +622,7 @@ watch(
 )
 
 watch(activeTab, (tab) => {
+  // 切换标签页时按需加载数据
   if (tab === 'history' && historyList.value.length === 0) {
     loadHistoryList()
   }
@@ -604,6 +633,7 @@ watch(activeTab, (tab) => {
 })
 
 watch(historyScope, () => {
+  // 范围切换时刷新历史列表
   if (activeTab.value === 'history') {
     historyPage.value = 1
     loadHistoryList()
@@ -612,18 +642,21 @@ watch(historyScope, () => {
 })
 
 watch(pendingPage, () => {
+  // 待审批页码变化时同步 URL
   if (activeTab.value === 'pending') {
     syncRouteQuery()
   }
 })
 
 watch(historyPage, () => {
+  // 历史页码变化时同步 URL
   if (activeTab.value === 'history') {
     syncRouteQuery()
   }
 })
 
 watch(filteredPendingList, (list) => {
+  // 过滤后总数变化，防止页码越界
   const maxPage = Math.max(1, Math.ceil(list.length / pendingPageSize.value))
   if (pendingPage.value > maxPage) {
     pendingPage.value = maxPage
@@ -631,12 +664,14 @@ watch(filteredPendingList, (list) => {
 })
 
 watch(historyList, (list) => {
+  // 历史总数变化时纠正页码
   const maxPage = Math.max(1, Math.ceil(list.length / historyPageSize.value))
   if (historyPage.value > maxPage) {
     historyPage.value = maxPage
   }
 })
 
+// 初始化：恢复筛选条件并加载数据
 onMounted(() => {
   // 恢复筛选状态
   const savedFilter = sessionStorage.getItem('approvalCenterFilter')

@@ -1,3 +1,4 @@
+// 路由配置：定义管理端页面结构与登录校验。
 import { createRouter, createWebHistory } from 'vue-router'
 import Layout from '../views/Layout.vue'
 import Dashboard from '../views/Dashboard.vue'
@@ -10,6 +11,7 @@ import AccessRecordDetail from '../views/AccessRecordDetail.vue'
 import Statistics from '../views/Statistics.vue'
 import { ElMessage } from 'element-plus'
 
+// 路由表：以 Layout 作为壳，子路由承载业务页面
 const routes = [
   {
     path: '/',
@@ -77,12 +79,13 @@ const routes = [
   }
 ]
 
+// 创建路由实例（使用 HTML5 History）
 const router = createRouter({
   history: createWebHistory(),
   routes
 })
 
-// 路由守卫
+// 路由守卫：未登录访问需要鉴权的页面时，提示并跳回首页
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   const requiresAuth = to.meta.requiresAuth

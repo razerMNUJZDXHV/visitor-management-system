@@ -3,7 +3,7 @@
     <div v-if="isLoggedIn" class="cockpit-container">
       <div class="page-header">
         <div>
-          <h2 class="page-title">管理驾驶舱</h2>
+          <h2 class="page-title">管理工作台</h2>
           <div class="page-subtitle">
             <span class="subtitle-name">欢迎回来，{{ displayName }}</span>
             <span class="subtitle-sep">·</span>
@@ -218,6 +218,7 @@
 </template>
 
 <script setup>
+// 管理工作台：登录/注册入口与数据驾驶舱。
 import { computed, inject, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -228,29 +229,36 @@ import { debounce } from '../utils/debounce'
 import { formatDateTime, mapAppointment } from '../utils/appointment'
 import { PHONE_REGEX, PASSWORD_REGEX } from '../utils/validators' 
 
+// 路由实例
 const router = useRouter()
 
+// 共享登录态
 const globalState = inject('globalState')
 const isLoggedIn = globalState.isLoggedIn
 const userInfo = globalState.userInfo
 
+// 登录/注册面板切换
 const showLogin = ref(true)
 const showRegister = ref(false)
 
+// 登录表单模型
 const loginForm = reactive({
   phone: '',
   password: ''
 })
 
+// 注册表单模型
 const registerForm = reactive({
   phone: '',
   realName: '',
   password: ''
 })
 
+// 表单实例引用
 const loginFormRef = ref(null)
 const registerFormRef = ref(null)
 
+// 登录校验规则
 const loginRules = {
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
@@ -261,6 +269,7 @@ const loginRules = {
   ]
 }
 
+// 注册校验规则
 const registerRules = {
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
@@ -275,6 +284,7 @@ const registerRules = {
   ]
 }
 
+// 登录提交（防抖，避免重复点击）
 const handleLogin = debounce(async () => {
   if (!loginFormRef.value) return
   await loginFormRef.value.validate(async (valid) => {
@@ -283,6 +293,7 @@ const handleLogin = debounce(async () => {
       const res = await axios.post('/api/admin/login', loginForm)
       if (res.code === 200) {
         ElMessage.success('登录成功')
+        // 写入 token 与用户信息，供路由守卫和页面展示使用
         localStorage.setItem('token', res.data.token)
         localStorage.setItem('userInfo', JSON.stringify(res.data))
         isLoggedIn.value = true
@@ -298,6 +309,7 @@ const handleLogin = debounce(async () => {
   })
 }, 500)
 
+// 注册提交（防抖，避免重复点击）
 const handleRegister = debounce(async () => {
   if (!registerFormRef.value) return
   await registerFormRef.value.validate(async (valid) => {
@@ -319,6 +331,7 @@ const handleRegister = debounce(async () => {
   })
 }, 500)
 
+// 重置登录表单
 const resetLoginForm = () => {
   loginForm.phone = ''
   loginForm.password = ''
@@ -329,6 +342,7 @@ const resetLoginForm = () => {
   })
 }
 
+// 重置注册表单
 const resetRegisterForm = () => {
   registerForm.phone = ''
   registerForm.realName = ''
@@ -338,9 +352,12 @@ const resetRegisterForm = () => {
   })
 }
 
+// 统计与待办加载状态
 const loadingStats = ref(false)
 const loadingPending = ref(false)
+// 最近更新时间
 const lastUpdated = ref(null)
+// 仪表盘统计数据
 const stats = ref({
   todayFlow: 0,
   todaySignIn: 0,
@@ -352,22 +369,28 @@ const stats = ref({
   rejectedCount: 0,
   completedCount: 0
 })
+// 待审批列表
 const pendingList = ref([])
 
+// 展示名称：优先真实姓名，其次账号信息
 const displayName = computed(() => {
   const info = userInfo.value || {}
   return info.realName || info.name || info.username || info.phone || '管理员'
 })
 
+// 最近更新时间文案
 const lastUpdatedText = computed(() => (lastUpdated.value ? formatDateTime(lastUpdated.value) : '—'))
 
+// 待审批数量：优先使用统计值，兜底列表长度
 const pendingCount = computed(() => {
   const statsCount = Number(stats.value.pendingCount || 0)
   return statsCount || pendingList.value.length
 })
 
+// 待审批预览：取前 5 条
 const pendingPreview = computed(() => pendingList.value.slice(0, 5))
 
+// 待办提示清单
 const todoItems = computed(() => {
   const items = []
   if (pendingCount.value > 0) {
@@ -400,6 +423,7 @@ const todoItems = computed(() => {
   return items
 })
 
+// 告警信息：依据统计数据生成
 const alertItems = computed(() => {
   const alerts = []
   if (stats.value.todayEmergency > 0) {
@@ -429,6 +453,7 @@ const alertItems = computed(() => {
   return alerts
 })
 
+// 快捷入口
 const quickLinks = [
   { title: '审批中心', desc: '处理待审批申请', route: '/approval-center?tab=pending' },
   { title: '通行记录', desc: '查看访客通行情况', route: '/access-record' },
@@ -436,6 +461,7 @@ const quickLinks = [
   { title: '预约设置', desc: '调整预约规则', route: '/appointment-setting' }
 ]
 
+// 拉取统计数据
 const loadStats = async () => {
   loadingStats.value = true
   try {
@@ -454,6 +480,7 @@ const loadStats = async () => {
   }
 }
 
+// 拉取待审批列表
 const loadPendingList = async () => {
   loadingPending.value = true
   try {
@@ -471,14 +498,17 @@ const loadPendingList = async () => {
   }
 }
 
+// 同步刷新统计与待审批列表
 const reloadDashboard = async () => {
   await Promise.all([loadStats(), loadPendingList()])
 }
 
+// 快捷跳转
 const goQuick = (route) => {
   if (route) router.push(route)
 }
 
+// 进入待审批详情
 const goPendingDetail = (row) => {
   router.push({
     path: `/approval-detail/${row.appointmentId}`,
@@ -486,12 +516,14 @@ const goPendingDetail = (row) => {
   })
 }
 
+// 登录成功后自动刷新数据
 watch(isLoggedIn, (value) => {
   if (value) {
     reloadDashboard()
   }
 })
 
+// 初次进入时，如果已登录则加载数据
 onMounted(() => {
   if (isLoggedIn.value) {
     reloadDashboard()
@@ -509,6 +541,15 @@ onMounted(() => {
   min-height: 100%;
   padding: 20px;
   background: #fff;
+  /* 驾驶舱主题变量，便于统一调色 */
+  --cockpit-text: #303133;
+  --cockpit-muted: #909399;
+  --cockpit-card: #ffffff;
+  --cockpit-border: #e4e7ed;
+  --cockpit-warn: #e6a23c;
+  --cockpit-danger: #f56c6c;
+  --cockpit-primary: #409eff;
+  --cockpit-accent: #00a87a;
   font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   color: #303133;
 }

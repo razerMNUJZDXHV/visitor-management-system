@@ -1,4 +1,4 @@
-@import "../appointment/list.less";
+@import "../common/common.less";
 
 .search-bar {
   background: #fff;
@@ -50,111 +50,6 @@
   color: #666;
 }
 
-.picker-box {
-  min-width: 150rpx;
-  height: 64rpx;
-  line-height: 64rpx;
-  padding: 0 16rpx;
-  background: #f5f5f5;
-  border-radius: 8rpx;
-  font-size: 24rpx;
-  color: #333;
-  white-space: nowrap;
-  text-align: center;
-}
-
-.dropdown {
-  position: relative;
-}
-
-.dropdown-menu {
-  position: absolute;
-  top: calc(100% + 8rpx);
-  left: 0;
-  min-width: 100%;
-  background: #f5f5f5;
-  border-radius: 8rpx;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.15);
-  z-index: 100;
-  overflow: hidden;
-}
-
-.dropdown-item {
-  height: 64rpx;
-  line-height: 64rpx;
-  padding: 0 16rpx;
-  font-size: 24rpx;
-  color: #333;
-  white-space: nowrap;
-  text-align: center;
-}
-
-.dropdown-item.active {
-  background: #1677ff;
-  color: #fff;
-}
-
-.cascade-row {
-  display: flex;
-  max-height: 300rpx;
-  overflow: hidden;
-}
-
-.cascade-col {
-  flex: 1;
-  max-height: 300rpx;
-  overflow-y: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.cascade-col::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
-}
-
-.cascade-title {
-  height: 48rpx;
-  line-height: 48rpx;
-  text-align: center;
-  font-size: 26rpx;
-  color: #666;
-  font-weight: bold;
-  position: sticky;
-  top: 0;
-  background: #f5f5f5;
-}
-
-.cascade-item {
-  height: 56rpx;
-  line-height: 56rpx;
-  text-align: center;
-  font-size: 24rpx;
-  color: #333;
-}
-
-.cascade-item.active {
-  background: #1677ff;
-  color: #fff;
-  border-radius: 6rpx;
-}
-
-.cascade-footer {
-  display: flex;
-  justify-content: center;
-  gap: 40rpx;
-  margin-top: 8rpx;
-  padding-top: 8rpx;
-  border-top: 1rpx solid #f0f0f0;
-}
-
-.cascade-footer text {
-  font-size: 26rpx;
-  color: #1677ff;
-  padding: 8rpx 16rpx;
-}
-
 .search-input {
   flex: 1;
   height: 64rpx;
@@ -181,12 +76,3 @@
   justify-content: space-between;
 }
 
-.status-badge {
-  font-size: 26rpx;
-  padding: 6rpx 16rpx;
-  border-radius: 20rpx;
-  font-weight: 500;
-}
-
-.status-success { background: #e6f7ff; color: #1890ff; }
-.status-fail { background: #fff1f0; color: #f5222d; }

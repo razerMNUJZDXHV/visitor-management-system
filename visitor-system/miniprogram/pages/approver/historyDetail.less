@@ -1,4 +1,4 @@
-@import "../appointment/list.less";
+@import "../common/common.less";
 
 .page-container {
   height: 100vh;
@@ -36,26 +36,11 @@
   border-bottom: 1rpx solid #f0f0f0;
 }
 
-.card-title.required::before {
-  content: '*';
-  color: #f5222d;
-  margin-right: 8rpx;
-}
-
 .status-row {
   display: flex;
   justify-content: center;
   padding: 10rpx 0;
 }
-
-.status-badge {
-  font-size: 30rpx;
-  padding: 10rpx 40rpx;
-  border-radius: 40rpx;
-  font-weight: 500;
-}
-
-.status-pending { background: #fff7e6; color: #fa8c16; }
 
 .info-row {
   display: flex;
@@ -69,41 +54,6 @@
   width: 160rpx;
   color: #666;
   flex-shrink: 0;
-}
-
-.reject-textarea {
-  width: 100%;
-  min-height: 160rpx;
-  font-size: 28rpx;
-  padding: 16rpx;
-  border: 1rpx solid #e8e8e8;
-  border-radius: 8rpx;
-  box-sizing: border-box;
-}
-
-.word-count {
-  text-align: right;
-  font-size: 24rpx;
-  color: #999;
-  margin-top: 8rpx;
-}
-
-.word-count.over-limit {
-  color: #f5222d;
-}
-
-.bottom-bar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 98rpx;
-  display: flex;
-  padding: 20rpx 32rpx;
-  background: #fff;
-  border-top: 1rpx solid #e8e8e8;
-  gap: 20rpx;
-  z-index: 998;
-  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
 }
 
 .reason-content {

@@ -1,10 +1,4 @@
-.page-container {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: #f5f7fa;
-  box-sizing: border-box;
-}
+@import "../common/common.less";
 
 .content-scroll {
   flex: 1;
@@ -22,6 +16,11 @@
   display: none;
   width: 0;
   height: 0;
+}
+
+.section {
+  background: #fff;
+  margin-bottom: 20rpx;
 }
 
 .notice-card {
@@ -48,11 +47,6 @@
 
 .notice-item:last-child {
   border-bottom: none;
-}
-
-.section {
-  background: #fff;
-  margin-bottom: 20rpx;
 }
 
 .section-title {
@@ -123,18 +117,18 @@ textarea {
 }
 
 .bottom-bar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  display: flex;
-  padding: 20rpx 32rpx;
-  background: #fff;
-  border-top: 1rpx solid #e8e8e8;
-  box-shadow: 0 -2rpx 8rpx rgba(0,0,0,0.05);
-  z-index: 999;
-  bottom: 0;
-  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
-  padding-bottom: calc(20rpx + constant(safe-area-inset-bottom));
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    padding: 20rpx 32rpx;
+    background: #fff;
+    border-top: 1rpx solid #e8e8e8;
+    gap: 20rpx;
+    z-index: 998;
+    padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+    padding-bottom: calc(20rpx + constant(safe-area-inset-bottom));
 }
 
 .reset-btn {

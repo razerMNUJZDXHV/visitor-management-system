@@ -1,4 +1,4 @@
-@import "../appointment/list.less";
+@import "../common/common.less";
 
 /* 订阅提示条 */
 .subscribe-tip {
@@ -53,7 +53,7 @@
 }
 
 .welcome-text {
-  font-size: 30rpx;      // 适当调小
+  font-size: 30rpx;
   font-weight: 500;
   color: #333;
 }
@@ -83,28 +83,10 @@
   border-bottom: 1rpx solid #e8e8e8;
 }
 
-/* 让“更早”可点击且有反馈 */
 .group-header:active {
   background: #e9ecef;
 }
 
-.status-badge {
-  font-size: 24rpx;
-  padding: 6rpx 16rpx;
-  border-radius: 20rpx;
-}
-
-.status-pending {
-  background: #fff7e6;
-  color: #fa8c16;
-}
-
-/* 列表项调整 */
 .appointment-item .item-header {
   justify-content: space-between;
-}
-
-.apply-date {
-  font-size: 24rpx;
-  color: #999;
 }

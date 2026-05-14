@@ -1,4 +1,5 @@
 import { request } from '../../utils/request';
+import { calculateNavHeight, formatDateTime as formatDateTimeUtil, formatDateOnly as formatDateOnlyUtil } from '../../utils/util';
 
 Page({
   data: {
@@ -12,10 +13,7 @@ Page({
   },
 
   onLoad() {
-    const systemInfo = wx.getSystemInfoSync();
-    const statusBarHeight = systemInfo.statusBarHeight || 20;
-    const navContentHeight = 44;
-    this.setData({ navHeight: statusBarHeight + navContentHeight });
+    this.setData({ navHeight: calculateNavHeight() });
   
     // 优先从独立存储的 realName 读取，其次从 userInfo 对象读取
     const realName = wx.getStorageSync('realName') || '';
@@ -36,8 +34,8 @@ Page({
       .then(data => {
         const list = data.map((item: any) => ({
           ...item,
-          createTimeText: this.formatDateTime(new Date(item.createTime)),
-          expectedStartTimeText: this.formatDateTime(new Date(item.expectedStartTime))
+          createTimeText: this.formatDateTime(item.createTime),
+          expectedStartTimeText: this.formatDateTime(item.expectedStartTime)
         }));
         this.splitByToday(list);
       })
@@ -47,7 +45,7 @@ Page({
   },
 
   splitByToday(list: any[]) {
-    const todayStr = this.formatDateOnly(new Date());
+    const todayStr = formatDateOnlyUtil(new Date());
     const todayList: any[] = [];
     const earlierList: any[] = [];
     list.forEach(item => {
@@ -62,19 +60,11 @@ Page({
   },
 
   formatDateTime(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hour = String(date.getHours()).padStart(2, '0');
-    const minute = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hour}:${minute}`;
+    return formatDateTimeUtil(date);
   },
 
   formatDateOnly(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return formatDateOnlyUtil(date);
   },
 
   toggleTodayExpand() {
@@ -87,6 +77,6 @@ Page({
 
   goDetail(e: any) {
     const id = e.currentTarget.dataset.id;
-    wx.navigateTo({ url: `/pages/approver/detail?id=${id}` });
+    wx.navigateTo({ url: `/pages/approver/detail?id=${encodeURIComponent(id)}` });
   }
 });

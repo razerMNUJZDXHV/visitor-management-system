@@ -11,8 +11,6 @@
   ⚠️ 今日预约人数已达上限（{{dailyLimit}}人），暂无法预约
 </view>
 
-<!-- 核心修复：调用formatBanTime方法格式化时间 -->
-<!-- 简化版：先不调用格式化方法，直接显示原始值 -->
 <view wx:if="{{banInfo.bannedUntil}}" class="ban-tip">
   ⚠️ 您已被禁止预约至 {{banInfo.bannedUntil}}（累计爽约 {{banInfo.missedCount}} 次）
 </view>
@@ -84,19 +82,19 @@
       </view>
       <picker-view indicator-style="height: 50px;" value="{{pickerValue}}" bindchange="onPickerChange" class="picker-view">
         <picker-view-column>
-          <view wx:for="{{years}}" wx:key="index">{{item}}年</view>
+          <view wx:for="{{years}}" wx:key="*this">{{item}}年</view>
         </picker-view-column>
         <picker-view-column>
-          <view wx:for="{{months}}" wx:key="index">{{item}}月</view>
+          <view wx:for="{{months}}" wx:key="*this">{{item}}月</view>
         </picker-view-column>
         <picker-view-column>
-          <view wx:for="{{days}}" wx:key="index">{{item}}日</view>
+          <view wx:for="{{days}}" wx:key="*this">{{item}}日</view>
         </picker-view-column>
         <picker-view-column>
-          <view wx:for="{{hours}}" wx:key="index">{{item}}时</view>
+          <view wx:for="{{hours}}" wx:key="*this">{{item}}时</view>
         </picker-view-column>
         <picker-view-column>
-          <view wx:for="{{minutes}}" wx:key="index">{{item}}分</view>
+          <view wx:for="{{minutes}}" wx:key="*this">{{item}}分</view>
         </picker-view-column>
       </picker-view>
     </view>

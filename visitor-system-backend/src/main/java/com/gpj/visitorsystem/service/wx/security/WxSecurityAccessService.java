@@ -678,11 +678,11 @@ public class WxSecurityAccessService {
     public List<SecurityAlertDTO> pollAlerts() {
         // 1. 从告警中心拉取缓存的告警（只读取不清空）
         List<SecurityAlertDTO> cachedAlerts = securityAlertCenter.peek();
-        
-        // 3. 查询活跃的紧急登记
+
+        // 2. 查询活跃的紧急登记
         List<Appointment> emergencyList = appointmentMapper.listEmergencyActive();
 
-        // 4. 合并去重（按alertType+appointmentId）
+        // 3. 合并去重（按alertType+appointmentId）
         Map<String, SecurityAlertDTO> merged = new java.util.LinkedHashMap<>();
         for (SecurityAlertDTO alert : cachedAlerts) {
             if (alert == null) {
@@ -692,7 +692,7 @@ public class WxSecurityAccessService {
             merged.put(key, alert);
         }
 
-        // 5. 添加紧急登记告警（如果不存在）
+        // 4. 添加紧急登记告警（如果不存在）
         for (Appointment appointment : emergencyList) {
             String key = EMERGENCY_ALERT_TYPE + "-" + appointment.getAppointmentId();
             if (merged.containsKey(key)) {
@@ -700,6 +700,72 @@ public class WxSecurityAccessService {
             }
             SecurityAlertDTO emergencyAlert = buildEmergencyAlert(appointment);
             merged.put(key, emergencyAlert);
+        }
+
+        // 5. 实时扫描补充超时告警（避免依赖定时任务导致首次查询为空）
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime graceStart = now.minusMinutes(AppointmentUtil.QR_GRACE_MINUTES);
+
+        // 5.1 已到预计离开时间但未签离（未超过宽限期）
+        List<Appointment> reachedList = appointmentMapper.listLeaveTimeReached(now, graceStart);
+        for (Appointment appointment : reachedList) {
+            String key = "LEAVE_TIME_REACHED-" + appointment.getAppointmentId();
+            if (merged.containsKey(key)) {
+                continue;
+            }
+            long minutes = Duration.between(appointment.getExpectedEndTime(), now).toMinutes();
+            String idCard = AppointmentUtil.decryptIdCard(appointment.getVisitorIdCard(), aesEncryptUtil);
+            LocalDateTime signInTime = findSignInTime(appointment.getAppointmentId());
+            LocalDateTime graceExpireTime = AppointmentUtil.getGraceExpireTime(appointment);
+
+            SecurityAlertDTO dto = new SecurityAlertDTO();
+            dto.setAlertType("LEAVE_TIME_REACHED");
+            dto.setMessage("访客已到预计离开时间，仍未签离，请尽快提醒");
+            dto.setAppointmentId(appointment.getAppointmentId());
+            dto.setVisitorName(appointment.getVisitorName());
+            dto.setVisitorPhone(appointment.getVisitorPhone());
+            dto.setVisitorIdCard(idCard);
+            dto.setVisitReason(appointment.getVisitReason());
+            dto.setSignInTime(signInTime);
+            dto.setExpectedStartTime(appointment.getExpectedStartTime());
+            dto.setExpectedEndTime(appointment.getExpectedEndTime());
+            dto.setGraceExpireTime(graceExpireTime);
+            dto.setCanManualSignOut(false);
+            dto.setOverstayMinutes((int) Math.max(minutes, 0));
+            dto.setAppointmentStatus(appointment.getStatus());
+            dto.setOccurredAt(appointment.getExpectedEndTime() != null ? appointment.getExpectedEndTime() : now);
+            merged.put(key, dto);
+        }
+
+        // 5.2 超时滞留（已超过宽限期）
+        List<Appointment> overtimeList = appointmentMapper.listOvertimeStaying(graceStart);
+        for (Appointment appointment : overtimeList) {
+            String key = "OVERTIME_EXPIRED-" + appointment.getAppointmentId();
+            if (merged.containsKey(key)) {
+                continue;
+            }
+            LocalDateTime graceExpireTime = AppointmentUtil.getGraceExpireTime(appointment);
+            long minutes = Duration.between(graceExpireTime, now).toMinutes();
+            String idCard = AppointmentUtil.decryptIdCard(appointment.getVisitorIdCard(), aesEncryptUtil);
+            LocalDateTime signInTime = findSignInTime(appointment.getAppointmentId());
+
+            SecurityAlertDTO dto = new SecurityAlertDTO();
+            dto.setAlertType("OVERTIME_EXPIRED");
+            dto.setMessage("访客滞留超时已过30分钟宽限，请安保手动签离");
+            dto.setAppointmentId(appointment.getAppointmentId());
+            dto.setVisitorName(appointment.getVisitorName());
+            dto.setVisitorPhone(appointment.getVisitorPhone());
+            dto.setVisitorIdCard(idCard);
+            dto.setVisitReason(appointment.getVisitReason());
+            dto.setSignInTime(signInTime);
+            dto.setExpectedStartTime(appointment.getExpectedStartTime());
+            dto.setExpectedEndTime(appointment.getExpectedEndTime());
+            dto.setGraceExpireTime(graceExpireTime);
+            dto.setCanManualSignOut(true);
+            dto.setOverstayMinutes((int) Math.max(minutes, 0));
+            dto.setAppointmentStatus(appointment.getStatus());
+            dto.setOccurredAt(graceExpireTime != null ? graceExpireTime : now);
+            merged.put(key, dto);
         }
 
         // 6. 按发生时间倒序

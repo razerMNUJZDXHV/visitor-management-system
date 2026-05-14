@@ -1,4 +1,5 @@
 import { request } from '../../utils/request';
+import { calculateNavHeight } from '../../utils/util';
 
 Page({
   data: {
@@ -11,10 +12,7 @@ Page({
   },
 
   onLoad() {
-    const systemInfo = wx.getSystemInfoSync();
-    const statusBarHeight = systemInfo.statusBarHeight || 20;
-    const navContentHeight = 44;
-    this.setData({ navHeight: statusBarHeight + navContentHeight });
+    this.setData({ navHeight: calculateNavHeight() });
   },
 
   onShow() {

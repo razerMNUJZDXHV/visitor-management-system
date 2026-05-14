@@ -1,5 +1,19 @@
 <navigation-bar id="navBar"/>
 
+<template name="pendingItem">
+  <view class="appointment-item" wx:for="{{list}}" wx:key="appointmentId" bindtap="goDetail" data-id="{{item.appointmentId}}">
+    <view class="item-header">
+      <text class="apply-date">{{item.createTimeText}}</text>
+      <text class="status-badge status-pending">待审批</text>
+    </view>
+    <view class="item-content">
+      <view class="row"><text class="label">访客姓名：</text>{{item.visitorName}}</view>
+      <view class="row"><text class="label">手机号：</text>{{item.visitorPhone}}</view>
+      <view class="row"><text class="label">到访时间：</text>{{item.expectedStartTimeText}}</view>
+    </view>
+  </view>
+</template>
+
 <view class="page-container" style="padding-top: {{navHeight}}px;">
   <!-- 顶部欢迎卡片 -->
   <view class="welcome-card">
@@ -19,17 +33,7 @@
         <text class="expand-icon">{{todayExpanded ? '▼' : '▶'}}</text>
       </view>
       <block wx:if="{{todayExpanded}}">
-        <view class="appointment-item" wx:for="{{todayList}}" wx:key="appointmentId" bindtap="goDetail" data-id="{{item.appointmentId}}">
-          <view class="item-header">
-            <text class="apply-date">{{item.createTimeText}}</text>
-            <text class="status-badge status-pending">待审批</text>
-          </view>
-          <view class="item-content">
-            <view class="row"><text class="label">访客姓名：</text>{{item.visitorName}}</view>
-            <view class="row"><text class="label">手机号：</text>{{item.visitorPhone}}</view>
-            <view class="row"><text class="label">到访时间：</text>{{item.expectedStartTimeText}}</view>
-          </view>
-        </view>
+        <template is="pendingItem" data="{{list: todayList}}" />
       </block>
     </view>
 
@@ -40,17 +44,7 @@
         <text class="expand-icon">{{earlierExpanded ? '▼' : '▶'}}</text>
       </view>
       <block wx:if="{{earlierExpanded}}">
-        <view class="appointment-item" wx:for="{{earlierList}}" wx:key="appointmentId" bindtap="goDetail" data-id="{{item.appointmentId}}">
-          <view class="item-header">
-            <text class="apply-date">{{item.createTimeText}}</text>
-            <text class="status-badge status-pending">待审批</text>
-          </view>
-          <view class="item-content">
-            <view class="row"><text class="label">访客姓名：</text>{{item.visitorName}}</view>
-            <view class="row"><text class="label">手机号：</text>{{item.visitorPhone}}</view>
-            <view class="row"><text class="label">到访时间：</text>{{item.expectedStartTimeText}}</view>
-          </view>
-        </view>
+        <template is="pendingItem" data="{{list: earlierList}}" />
       </block>
     </view>
 

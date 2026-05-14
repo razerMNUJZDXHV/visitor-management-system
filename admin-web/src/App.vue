@@ -3,9 +3,11 @@
 </template>
 
 <script setup>
+// 根组件：仅承载路由视图与全局样式。
 </script>
 
 <style>
+/* 全局基础样式：统一盒模型与字体。 */
 * {
   margin: 0;
   padding: 0;

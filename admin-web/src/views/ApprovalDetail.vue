@@ -142,6 +142,7 @@
 </template>
 
 <script setup>
+// 审批详情：展示预约信息并提供审批操作。
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -156,16 +157,22 @@ import { formatDateTime, getApprovalStatusText } from '../utils/appointment'
 const route = useRoute()
 const router = useRouter()
 
+// 详情加载与操作状态
 const loading = ref(false)
 const submitting = ref(false)
 const appointment = ref({})
 const showRejectInput = ref(false)
 const rejectReason = ref('')
 
+// 页面模式：历史只读/待审批可操作
 const isHistoryMode = computed(() => route.query.mode === 'history')
+// 是否允许审批操作
 const canOperate = computed(() => !isHistoryMode.value && Number(appointment.value.status) === 0)
+// 是否允许删除记录
 const canDeleteRecord = computed(() => [2, 3, 5, 6].includes(Number(appointment.value.status)))
+// 页面标题
 const pageTitle = computed(() => '审批详情')
+// 状态文案与标签类型
 const statusText = computed(() => getApprovalStatusText(appointment.value.status, isHistoryMode.value ? 'history' : 'pending', appointment.value))
 const statusTagType = computed(() => {
   const status = Number(appointment.value.status)
@@ -178,6 +185,7 @@ const statusTagType = computed(() => {
   return 'info'
 })
 
+// 计算返回路径：优先使用来源路由
 const getReturnPath = () => {
   const from = route.query.from
   if (typeof from === 'string' && from.startsWith('/')) {
@@ -186,10 +194,12 @@ const getReturnPath = () => {
   return isHistoryMode.value ? '/approval-center?tab=history' : '/approval-center?tab=pending'
 }
 
+// 返回列表页
 const navigateBack = () => {
   router.push(getReturnPath())
 }
 
+// 加载详情
 const loadDetail = async () => {
   const id = Number(route.params.id)
   if (!id) {
@@ -217,6 +227,7 @@ const loadDetail = async () => {
   }
 }
 
+// 审批通过
 const handleApprove = async () => {
   try {
     await ElMessageBox.confirm('确定通过该预约申请吗？', '确认通过', {
@@ -245,6 +256,7 @@ const handleApprove = async () => {
   }
 }
 
+// 点击拒绝按钮（首次弹出输入框）
 const handleReject = () => {
   if (!showRejectInput.value) {
     showRejectInput.value = true
@@ -259,11 +271,13 @@ const handleReject = () => {
   submitReject()
 }
 
+// 取消拒绝操作
 const cancelReject = () => {
   showRejectInput.value = false
   rejectReason.value = ''
 }
 
+// 提交拒绝
 const submitReject = async () => {
   if (!rejectReason.value.trim()) {
     ElMessage.warning('请填写拒绝理由')
@@ -287,10 +301,12 @@ const submitReject = async () => {
   }
 }
 
+// 返回按钮
 const goBack = () => {
   navigateBack()
 }
 
+// 删除记录
 const handleDeleteRecord = async () => {
   try {
     await ElMessageBox.confirm('确认删除当前记录吗？删除后不可恢复。', '删除确认', {
@@ -319,6 +335,7 @@ const handleDeleteRecord = async () => {
   }
 }
 
+// 路由变化时重新加载详情
 watch(
   () => route.fullPath,
   () => {
@@ -326,6 +343,7 @@ watch(
   }
 )
 
+// 初始化加载
 onMounted(() => {
   loadDetail()
 })

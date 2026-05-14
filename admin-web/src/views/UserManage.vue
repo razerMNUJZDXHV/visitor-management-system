@@ -158,7 +158,7 @@
 </template>
 
 <script setup>
-
+// 用户管理：用户列表、分页、创建/编辑/删除。
 import { ref, reactive, onMounted, computed, inject, watch, nextTick } from 'vue'
 import axios from '../api/axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -166,9 +166,11 @@ import { useRouter } from 'vue-router'
 import { formatDateTime } from '../utils/appointment'
 import { PASSWORD_REGEX } from '../utils/validators'
 
+// 路由与全局状态
 const router = useRouter()
 const globalState = inject('globalState')
 
+// 从本地缓存读取当前登录用户
 const getCurrentUser = () => {
   const userInfoStr = localStorage.getItem('userInfo')
   if (userInfoStr) {
@@ -182,23 +184,27 @@ const getCurrentUser = () => {
 }
 const currentUser = ref(getCurrentUser())
 
+// 搜索条件
 const searchForm = reactive({
   phone: '',
   realName: '',
   userType: null
 })
 
+// 分页状态
 const pagination = reactive({
   pageNum: 1,
   pageSize: 10,
   total: 0
 })
 
+// 列表与权限状态
 const loading = ref(false)
 const userList = ref([])
 const adminCount = ref(0)
 const isOnlyAdmin = computed(() => adminCount.value === 1)
 
+// 弹窗与表单状态
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增用户')
 const isCreate = ref(true)
@@ -211,9 +217,9 @@ const form = reactive({
   password: null
 })
 
-// 修改 formRules 中的 password 校验规则
 // 记录修改时的原始用户类型（用于密码校验）
 const originalUserType = ref(null)
+// 表单校验规则
 const formRules = {
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
@@ -258,12 +264,13 @@ const formRules = {
   ]
 }
 
+// 用户类型文本转换
 const getUserTypeText = (type) => {
   const map = { 1: '访客', 2: '审批人', 3: '安保', 4: '管理员' }
   return map[type] || '未知'
 }
 
-// 新增：单独获取管理员总数
+// 获取管理员数量，用于判断是否允许降级/删除
 const fetchAdminCount = async () => {
   try {
     const res = await axios.get('/api/admin/user/admin/count')
@@ -275,7 +282,7 @@ const fetchAdminCount = async () => {
   }
 }
 
-// 加载用户列表（不再全量查询）
+// 加载用户列表（支持分页与条件查询）
 const loadUserList = async () => {
   loading.value = true
   try {
@@ -299,17 +306,20 @@ const loadUserList = async () => {
   }
 }
 
+// 分页大小变化
 const handleSizeChange = (val) => {
   pagination.pageSize = val
   pagination.pageNum = 1
   loadUserList()
 }
 
+// 页码变化
 const handleCurrentChange = (val) => {
   pagination.pageNum = val
   loadUserList()
 }
 
+// 新增/编辑提交
 const handleSubmit = async () => {
   if (isOnlyAdmin.value && !isCreate.value && form.userId === currentUser.value.userId && form.userType !== 4) {
     ElMessage.warning('系统仅您一位管理员，不可修改为非管理员类型')
@@ -323,6 +333,7 @@ const handleSubmit = async () => {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
 
+  // 判断是否将自己从管理员降级为非管理员
   const isSelfAndDowngrade = !isCreate.value
     && form.userId === currentUser.value.userId
     && currentUser.value.userType === 4
@@ -359,6 +370,7 @@ const handleSubmit = async () => {
       await Promise.all([loadUserList(), fetchAdminCount()]) // 同时刷新列表和管理员计数
 
       if (!isCreate.value && form.userId === currentUser.value.userId) {
+        // 同步更新本地缓存与全局状态
         const updatedUserInfo = {
           ...currentUser.value,
           phone: form.phone,
@@ -389,6 +401,7 @@ const handleSubmit = async () => {
   }
 }
 
+// 删除用户
 const handleDelete = async (userId) => {
   if (userId === currentUser.value.userId) {
     ElMessage.warning('不可删除自己的账号')
@@ -409,11 +422,13 @@ const handleDelete = async (userId) => {
   }
 }
 
+// 触发搜索
 const handleSearch = () => {
   pagination.pageNum = 1
   loadUserList()
 }
 
+// 重置搜索条件
 const handleReset = () => {
   searchForm.phone = ''
   searchForm.realName = ''
@@ -422,6 +437,7 @@ const handleReset = () => {
   loadUserList()
 }
 
+// 当用户类型切换时重新校验密码字段
 watch(() => form.userType, async () => {
   if (formRef.value) {
     formRef.value.clearValidate('password')
@@ -430,6 +446,7 @@ watch(() => form.userType, async () => {
   }
 }, { immediate: true })
 
+// 打开新增用户弹窗
 const openCreateDialog = () => {
   isCreate.value = true
   dialogTitle.value = '新增用户'
@@ -444,6 +461,7 @@ const openCreateDialog = () => {
   dialogVisible.value = true
 }
 
+// 打开编辑用户弹窗
 const openUpdateDialog = (row) => {
   isCreate.value = false
   dialogTitle.value = '修改用户'
@@ -458,6 +476,7 @@ const openUpdateDialog = (row) => {
   dialogVisible.value = true
 }
 
+// 初始化加载
 onMounted(() => {
   loadUserList()
   fetchAdminCount()

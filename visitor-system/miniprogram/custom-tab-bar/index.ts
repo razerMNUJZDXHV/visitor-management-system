@@ -47,12 +47,12 @@ Component({
     // 更新选中状态
     updateSelected() {
       const pages = getCurrentPages();
-      if (!pages || pages.length === 0) return;     
+      if (!pages || pages.length === 0) return;
       const currentPage = pages[pages.length - 1];
-      if (!currentPage) return;                     
+      if (!currentPage) return;
       const route = currentPage.route;
       const list = this.data.list;
-      const index = list.findIndex(item => item.pagePath === route);
+      const index = list.findIndex((item: any) => item.pagePath === route);
       if (index !== -1) {
         this.setData({ selected: index });
       }

@@ -77,13 +77,16 @@ admin-web/
 
 ### API 地址配置
 
-在 `src/utils/request.js` 中修改后端 API 地址：
+在 `src/api/axios.js` 中修改后端 API 地址，或通过 `.env` 配置覆盖：
 
 ```javascript
-const request = axios.create({
-  baseURL: 'http://localhost:8080/api',  // 修改为你自己的后端地址
-  timeout: 5000
+const instance = axios.create({
+  baseURL: 'http://localhost:8080', // 修改为你自己的后端地址
+  timeout: 10000
 })
+
+// .env 示例
+// VITE_API_BASE_URL=http://localhost:8080
 ```
 
 ---
