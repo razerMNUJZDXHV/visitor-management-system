@@ -2,6 +2,7 @@ package com.gpj.visitorsystem.interceptor.wx;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 /**
@@ -30,7 +31,7 @@ import org.springframework.stereotype.Component;
 public class WxSecurityAuthInterceptor extends WxAuthInterceptor {
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public boolean preHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler) throws Exception {
         // 1. 先调用父类验证 Token（验证失败直接返回 false，父类已写 401 响应）
         if (!super.preHandle(request, response, handler)) {
             return false;

@@ -6,6 +6,7 @@ import com.gpj.visitorsystem.interceptor.wx.WxSecurityAuthInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.NonNull;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
@@ -43,12 +44,15 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
 
     @Autowired
+    @NonNull
     private AdminAuthInterceptor adminAuthInterceptor;
 
     @Autowired
+    @NonNull
     private WxAuthInterceptor wxAuthInterceptor;
 
     @Autowired
+    @NonNull
     private WxSecurityAuthInterceptor wxSecurityAuthInterceptor;
 
     /**
@@ -85,7 +89,7 @@ public class WebConfig implements WebMvcConfigurer {
      * 小程序接口：除登录外全部拦截，openid无效让用户重新登录
      */
     @Override
-    public void addInterceptors(InterceptorRegistry registry) {
+    public void addInterceptors(@NonNull InterceptorRegistry registry) {
         // 管理端拦截器：校验JWT Token
         registry.addInterceptor(adminAuthInterceptor)
                 .addPathPatterns("/api/admin/**")
