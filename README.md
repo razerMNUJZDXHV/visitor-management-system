@@ -50,6 +50,8 @@
 │
 ├── admin-web/                     # Vue3 管理后台
 │   ├── src/                      # 源代码
+│   │   ├── api/                 # 接口请求
+│   │   ├── utils/               # 工具函数
 │   │   ├── views/               # 页面组件
 │   │   ├── router/              # 路由配置
 │   │   └── main.js              # 入口文件
@@ -62,7 +64,9 @@
 │   ├── miniprogram/             # 小程序源代码
 │   │   ├── pages/              # 页面
 │   │   ├── components/         # 组件
-│   │   └── app.json            # 全局配置
+│   │   ├── app.ts              # 应用逻辑
+│   │   ├── app.json            # 全局配置
+│   │   └── app.less            # 全局样式
 │   ├── project.config.json       # 项目配置
 │   └── package.json             # 依赖配置
 │
@@ -76,7 +80,10 @@
     │   │   │   ├── entity/     # 实体类
     │   │   │   ├── dto/        # 数据传输对象
     │   │   │   ├── util/       # 工具类
-    │   │   │   └── interceptor/ # 拦截器
+    │   │   │   ├── interceptor/ # 拦截器
+    │   │   │   ├── config/     # 配置类
+    │   │   │   ├── exception/  # 异常处理
+    │   │   │   └── task/       # 定时任务
     │   │   └── resources/
     │   │       ├── mapper/      # MyBatis XML
     │   │       └── application.yaml # 配置文件
@@ -225,8 +232,8 @@ jwt:
 ## 🔒 安全特性
 
 1. **JWT Token 认证**
-   - Access Token（2小时） + Refresh Token（7天）
-   - 自动刷新机制
+   - Access Token（2小时），管理端过期后需重新登录
+   - 小程序端支持 Refresh Token（7天）自动续期
 
 2. **数据加密**
    - 身份证号 AES 加密存储
