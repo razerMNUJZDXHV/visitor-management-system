@@ -3,6 +3,7 @@ package com.gpj.visitorsystem.service.admin;
 import com.gpj.visitorsystem.dto.admin.AdminAppointmentDetailDTO;
 import com.gpj.visitorsystem.entity.Appointment;
 import com.gpj.visitorsystem.exception.BusinessException;
+import com.gpj.visitorsystem.mapper.AccessLogMapper;
 import com.gpj.visitorsystem.mapper.AppointmentMapper;
 import com.gpj.visitorsystem.util.AppointmentUtil;
 import com.gpj.visitorsystem.util.AesEncryptUtil;
@@ -45,6 +46,8 @@ public class AdminAppointmentService {
 
     @Autowired
     private AppointmentMapper appointmentMapper;
+    @Autowired
+    private AccessLogMapper accessLogMapper;
     @Autowired
     private AesEncryptUtil aesEncryptUtil;
 
@@ -119,7 +122,10 @@ public class AdminAppointmentService {
         List<AdminAppointmentDetailDTO> list = appointmentMapper.findAdminHistory(
                 normalizeScope(scope), adminId, keyword, startDate, endDate, status, searchType);
         if (list != null) {
-            list.forEach(dto -> AppointmentUtil.decryptIdCard(dto, aesEncryptUtil));
+            list.forEach(dto -> {
+                AppointmentUtil.decryptIdCard(dto, aesEncryptUtil);
+                dto.setOvertimeStaying(isOvertimeStaying(dto.getAppointmentId(), dto.getStatus()));
+            });
         }
         return list;
     }
@@ -154,6 +160,7 @@ public class AdminAppointmentService {
         }
         applyPendingExpireIfNeeded(detail);
         AppointmentUtil.decryptIdCard(detail, aesEncryptUtil);
+        detail.setOvertimeStaying(isOvertimeStaying(appointmentId, detail.getStatus()));
         return detail;
     }
 
@@ -270,6 +277,9 @@ public class AdminAppointmentService {
         if (!DELETABLE_STATUS.contains(appointment.getStatus())) {
             throw new BusinessException("当前状态记录不允许删除");
         }
+        if (isOvertimeStaying(appointmentId, appointment.getStatus())) {
+            throw new BusinessException("该记录访客已签到但未签离，请完成签离操作后再删除");
+        }
         appointmentMapper.deleteById(appointmentId);
     }
 
@@ -312,6 +322,9 @@ public class AdminAppointmentService {
             if (!DELETABLE_STATUS.contains(appointment.getStatus())) {
                 throw new BusinessException("存在不允许删除的记录（ID：" + id + "），请重新选择");
             }
+            if (isOvertimeStaying(id, appointment.getStatus())) {
+                throw new BusinessException("存在不允许删除的记录（ID：" + id + "），该记录访客已签到但未签离，请完成签离操作后再删除");
+            }
         }
 
         appointmentMapper.deleteByIds(distinctIds);
@@ -331,5 +344,21 @@ public class AdminAppointmentService {
             appointmentMapper.updateStatus(detail.getAppointmentId(), 6);
             detail.setStatus(6);
         }
+    }
+
+    /**
+     * 判断是否滞留超时（已过期且已签到但未签离）
+     *
+     * @param appointmentId 预约ID
+     * @param status 预约状态
+     * @return true：滞留超时，禁止删除；false：非滞留，允许删除
+     */
+    private boolean isOvertimeStaying(Long appointmentId, Integer status) {
+        if (!Integer.valueOf(6).equals(status)) {
+            return false;
+        }
+        int signInCount = accessLogMapper.countByAppointmentAndType(appointmentId, 1);
+        int signOutCount = accessLogMapper.countByAppointmentAndType(appointmentId, 2);
+        return signInCount > 0 && signOutCount == 0;
     }
 }

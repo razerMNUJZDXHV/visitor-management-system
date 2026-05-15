@@ -91,23 +91,51 @@ public interface UserMapper {
 
     /**
      * 分页查询用户列表
-     * @param offset  偏移量（(page-1)*pageSize）
+     * @param phone 手机号（可选）
+     * @param realName 真实姓名（可选）
+     * @param userType 用户类型（可选）
+     * @param bannedStatus 封禁状态（可选，0-正常 1-封禁中）
+     * @param now 当前时间（用于封禁状态判断）
+     * @param offset 偏移量（(page-1)*pageSize）
      * @param pageSize 每页条数
      */
     List<User> listUsersPage(
             @Param("phone") String phone,
             @Param("realName") String realName,
             @Param("userType") Integer userType,
+            @Param("bannedStatus") Integer bannedStatus,
+            @Param("now") java.time.LocalDateTime now,
             @Param("offset") Integer offset,
             @Param("pageSize") Integer pageSize
     );
 
     /**
      * 统计用户总数（用于分页计算）
+     * @param phone 手机号（可选）
+     * @param realName 真实姓名（可选）
+     * @param userType 用户类型（可选）
+     * @param bannedStatus 封禁状态（可选，0-正常 1-封禁中）
+     * @param now 当前时间（用于封禁状态判断）
      */
     Long countUsers(
             @Param("phone") String phone,
             @Param("realName") String realName,
-            @Param("userType") Integer userType
+            @Param("userType") Integer userType,
+            @Param("bannedStatus") Integer bannedStatus,
+            @Param("now") java.time.LocalDateTime now
     );
+
+    // ==================== 封禁管理 ====================
+
+    /**
+     * 查询所有封禁已过期的用户（banned_until < now 且 banned_until IS NOT NULL）
+     * 用于定时任务自动解封
+     */
+    List<User> listExpiredBans(@Param("now") java.time.LocalDateTime now);
+
+    /**
+     * 统计当前被封禁的用户数量（banned_until > now）
+     * 用于管理端异常监控
+     */
+    long countBannedUsers(@Param("now") java.time.LocalDateTime now);
 }

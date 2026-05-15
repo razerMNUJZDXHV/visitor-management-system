@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -286,6 +287,7 @@ public class AdminUserService {
      * @param phone 手机号（可选）
      * @param realName 真实姓名（可选）
      * @param userType 用户类型（可选）
+     * @param bannedStatus 封禁状态（可选，0-正常 1-封禁中）
      * @param pageNum 页码
      * @param pageSize 每页条数
      *
@@ -293,10 +295,12 @@ public class AdminUserService {
      * @return 分页结果
      */
     public PageResultDTO<User> listUsersPage(String phone, String realName, Integer userType,
+                                             Integer bannedStatus,
                                              Integer pageNum, Integer pageSize) {
         Integer offset = (pageNum - 1) * pageSize;
-        List<User> list = userMapper.listUsersPage(phone, realName, userType, offset, pageSize);
-        Long total = userMapper.countUsers(phone, realName, userType);
+        LocalDateTime now = LocalDateTime.now();
+        List<User> list = userMapper.listUsersPage(phone, realName, userType, bannedStatus, now, offset, pageSize);
+        Long total = userMapper.countUsers(phone, realName, userType, bannedStatus, now);
         return PageResultDTO.of(list, total);
     }
 
@@ -306,14 +310,14 @@ public class AdminUserService {
      * 【业务逻辑】
      * 统计userType=4的用户数量。
      *
-    * 【参数说明】
-    * 无
+     * 【参数说明】
+     * 无
      *
      * 【返回值】
      * @return 管理员数量
      */
     public Long countAdminUsers() {
-        return userMapper.countUsers(null, null, 4);
+        return userMapper.countUsers(null, null, 4, null, LocalDateTime.now());
     }
 
     /**
@@ -330,5 +334,35 @@ public class AdminUserService {
      */
     public User findById(Integer userId) {
         return userService.findById(userId);
+    }
+
+    /**
+     * 手动解除访客封禁
+     *
+     * 【业务逻辑】
+     * 仅允许解除访客(userType=1)的封禁，清空 banned_until 和 missed_count。
+     *
+     * 【参数说明】
+     * @param userId 用户ID
+     *
+     * 【异常情况】
+     * @throws BusinessException 用户不存在、非访客角色、未处于封禁状态
+     */
+    @Transactional
+    public void unbanUser(Integer userId) {
+        User user = userService.findById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+        if (user.getUserType() == null || user.getUserType() != 1) {
+            throw new BusinessException("仅访客角色支持手动解封");
+        }
+        if (user.getBannedUntil() == null) {
+            throw new BusinessException("该用户未处于封禁状态");
+        }
+        user.setBannedUntil(null);
+        user.setMissedCount(0);
+        userMapper.update(user);
+        logger.info("管理员手动解封访客 userId={}", userId);
     }
 }

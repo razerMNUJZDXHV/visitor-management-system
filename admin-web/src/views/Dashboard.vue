@@ -70,7 +70,6 @@
             <template #header>
               <div class="card-header">
                 <span>待办提醒</span>
-                <el-button type="primary" link @click="goQuick('/approval-center?tab=pending')">查看全部</el-button>
               </div>
             </template>
             <div class="todo-list">
@@ -401,20 +400,28 @@ const todoItems = computed(() => {
       tip: '建议优先处理'
     })
   }
+  if (stats.value.bannedUserCount > 0) {
+    items.push({
+      label: `当前封禁 ${stats.value.bannedUserCount} 人`,
+      tagType: 'danger',
+      route: '/user-manage?banStatus=1',
+      tip: '点击查看详情'
+    })
+  }
+  if (stats.value.overtimeStayingCount > 0) {
+    items.push({
+      label: `超时滞留 ${stats.value.overtimeStayingCount} 人`,
+      tagType: 'danger',
+      route: '/access-record',
+      tip: '需人工处理'
+    })
+  }
   if (stats.value.todayEmergency > 0) {
     items.push({
       label: `紧急通行 ${stats.value.todayEmergency} 起`,
       tagType: 'danger',
       route: '/access-record',
       tip: '请及时关注'
-    })
-  }
-  if (stats.value.todayFlow > 0) {
-    items.push({
-      label: `今日流量 ${stats.value.todayFlow} 人次`,
-      tagType: 'info',
-      route: '/statistics',
-      tip: '查看趋势'
     })
   }
   if (items.length === 0) {
@@ -426,6 +433,23 @@ const todoItems = computed(() => {
 // 告警信息：依据统计数据生成
 const alertItems = computed(() => {
   const alerts = []
+  // 封禁用户告警
+  if (stats.value.bannedUserCount > 0) {
+    alerts.push({
+      level: 'danger',
+      title: `当前封禁 ${stats.value.bannedUserCount} 人`,
+      desc: '因爽约被限制预约的用户，解封后恢复正常。'
+    })
+  }
+  // 超时滞留告警
+  if (stats.value.overtimeStayingCount > 0) {
+    alerts.push({
+      level: 'danger',
+      title: `超时滞留 ${stats.value.overtimeStayingCount} 人`,
+      desc: '访客已签到但未在规定时间签离，请关注。'
+    })
+  }
+  // 紧急通行告警
   if (stats.value.todayEmergency > 0) {
     alerts.push({
       level: 'danger',
@@ -433,18 +457,12 @@ const alertItems = computed(() => {
       desc: '请及时关注紧急通行情况。'
     })
   }
+  // 待审批积压告警
   if (pendingCount.value >= 10) {
     alerts.push({
       level: 'warn',
       title: `待审批积压 ${pendingCount.value} 条`,
       desc: '可优先处理超过24小时的申请。'
-    })
-  }
-  if (stats.value.rejectedCount >= 5) {
-    alerts.push({
-      level: 'info',
-      title: `本周期拒绝 ${stats.value.rejectedCount} 条`,
-      desc: '关注重复申请与材料缺失问题。'
     })
   }
   if (alerts.length === 0) {

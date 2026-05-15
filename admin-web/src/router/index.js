@@ -43,14 +43,6 @@ const routes = [
         meta: { requiresAuth: true, title: '审批管理' }
       },
       {
-        path: 'approval-pending',
-        redirect: '/approval-center'
-      },
-      {
-        path: 'approval-history',
-        redirect: '/approval-center?tab=history'
-      },
-      {
         path: 'approval-detail/:id',
         name: 'ApprovalDetail',
         component: ApprovalDetail,

@@ -52,4 +52,12 @@ public class AdminAppointmentDetailDTO {
     private Long approverId;      // 审批人ID
     private String approverName;   // 审批人姓名
     private String approverPhone;  // 审批人手机号
+
+    // ==================== 删除限制校验字段 ====================
+    /**
+     * 是否滞留超时（仅状态=6已过期时用于删除限制校验）
+     * true：已签到但未签离，属于滞留超时，禁止删除
+     * false：未签到或已签离，允许删除
+     */
+    private Boolean overtimeStaying;
 }

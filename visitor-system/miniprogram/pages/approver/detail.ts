@@ -1,9 +1,12 @@
 import { request } from '../../utils/request';
-import { calculateNavHeight, formatDateTimeFromStr } from '../../utils/util';
+import { calculateNavHeight, formatDateTimeFromStr, getStatusText, getStatusClass } from '../../utils/util';
+
 Page({
   data: {
     navHeight: 0,
     appointment: {} as any,
+    statusText: '',
+    statusClass: '',
     showRejectInput: false,
     rejectReason: '',
     reasonLength: 0
@@ -31,7 +34,11 @@ Page({
       data.createTime = formatDateTimeFromStr(data.createTime);
       data.expectedStartTime = formatDateTimeFromStr(data.expectedStartTime);
       data.expectedEndTime = formatDateTimeFromStr(data.expectedEndTime);
-      this.setData({ appointment: data });
+      this.setData({
+        appointment: data,
+        statusText: getStatusText(data.status),
+        statusClass: getStatusClass(data.status)
+      });
     })
     .catch(err => {
       wx.showToast({ title: err.msg || '加载失败', icon: 'none' });

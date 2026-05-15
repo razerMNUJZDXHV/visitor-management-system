@@ -190,7 +190,7 @@ const handleLogout = () => {
   padding: 0 !important;
 }
 
-/* 核心修复：使用深度选择器覆盖 el-menu-item 内部样式 */
+/* 使用深度选择器覆盖 el-menu-item 内部样式，确保文字居中 */
 .sidebar-menu .el-menu-item {
   /* 强制使用 flex 布局 */
   display: flex !important;

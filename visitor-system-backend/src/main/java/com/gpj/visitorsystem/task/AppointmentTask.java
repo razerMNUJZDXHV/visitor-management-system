@@ -13,24 +13,16 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
  * 【定时任务】预约相关定时任务
  *
  * 【核心职责】
- * 1. 定时扫描过期预约，自动标记爽约
- * 2. 处理爽约处罚逻辑（连续爽约2次封禁3个月）
- *
- * 【关键业务场景】
- * 1. 每10分钟执行一次，扫描状态为"预约成功(1)"且超过宽限期的预约
- * 2. 自动判定爽约，更新用户爽约次数和封禁状态
- * 3. 将过期预约状态更新为"已过期(6)"
- *
- * 【注意事项】
- * - 使用@Scheduled定时执行，cron表达式：0 0/10 * * * ?（每10分钟）
- * - 使用@Transactional保证数据一致性
- * - 避免重复处罚：检查是否存在更晚的爽约处理记录
+ * 1. 每分钟扫描过期预约，自动标记爽约并处罚
+ * 2. 自动解封封禁已过期的用户
  */
 @Component
 public class AppointmentTask {
@@ -44,119 +36,99 @@ public class AppointmentTask {
     private UserService userService;
 
     /**
-     * 【定时任务】处理爽约预约
+     * 【定时任务】每分钟扫描过期预约，自动处罚
      *
      * 【业务逻辑】
-     * 1. 查询所有状态为"预约成功(1)"且超过宽限期的预约
-     * 2. 遍历这些预约，逐个判定爽约并处罚
-     * 3. 更新用户爽约次数，连续爽约2次则封禁3个月
-     * 4. 将预约状态更新为"已过期(6)"
+     * 1. 查询所有 status=1（预约成功）的预约
+     * 2. 筛选出已超过宽限期的（expected_end_time + 30分钟 < now）
+     * 3. 统一标记为 status=6（已过期）
+     * 4. 筛选无签到记录的，逐个执行处罚
      *
-     * 【执行频率】
-     * 每10分钟执行一次
-     *
-     * 【注意事项】
-     * - 使用@Transactional保证原子性
-     * - 避免重复处罚：检查是否存在更晚的爽约处理记录
+     * 【执行频率】每分钟执行一次，最大延迟约1分钟
      */
-    // 懒加载模式：用户查询列表时已自动处理爽约，定时任务仅做兜底
-    // 每6小时执行一次，防止用户长期不登录导致数据未更新
-    @Scheduled(cron = "0 0 0/6 * * ?")  // 每天0点、6点、12点、18点执行
-    @Transactional
+    @Scheduled(cron = "0 */1 * * * ?")
     public int processNoShowAppointments() {
-        logger.info("开始执行爽约判定任务...");
+        logger.debug("开始执行爽约判定任务...");
 
-        // 1. 查询所有状态为"预约成功(1)"的预约
         List<Appointment> successAppointments = appointmentMapper.listByStatus(1);
+        LocalDateTime now = LocalDateTime.now();
 
-        int processedCount = 0;
+        // 第一步：标记已过期，筛选真正爽约的
+        List<Appointment> noShowCandidates = new ArrayList<>();
         for (Appointment appointment : successAppointments) {
-            // 2. 判断是否超过宽限过期时间
-            if (LocalDateTime.now().isAfter(AppointmentUtil.getGraceExpireTime(appointment))) {
-                processNoShow(appointment);
-                processedCount++;
+            if (now.isAfter(AppointmentUtil.getGraceExpireTime(appointment))) {
+                appointmentMapper.updateStatus(appointment.getAppointmentId(), 6);
+                appointment.setStatus(6);
+
+                int checkInCount = appointmentMapper.countAccessLogByAppointmentAndType(
+                        appointment.getAppointmentId(), 1);
+                if (checkInCount == 0) {
+                    noShowCandidates.add(appointment);
+                } else {
+                    logger.debug("[爽约判定] 预约 {} 已有签到记录，标记过期但不处罚",
+                            appointment.getAppointmentId());
+                }
             }
         }
 
-        logger.info("爽约判定任务执行完成，共处理 {} 条记录", processedCount);
+        if (noShowCandidates.isEmpty()) {
+            logger.debug("爽约判定任务完成，无需要处罚的爽约记录");
+            return 0;
+        }
+
+        // 第二步：按时间正序排序，确保处罚回算正确
+        noShowCandidates.sort(Comparator.comparing(Appointment::getExpectedEndTime,
+                Comparator.nullsLast(Comparator.naturalOrder())));
+
+        // 第三步：逐个执行处罚
+        int processedCount = 0;
+        for (Appointment appointment : noShowCandidates) {
+            try {
+                userService.processNoShow(appointment);
+                processedCount++;
+            } catch (Exception e) {
+                logger.error("[爽约判定] 预约 {} 处罚失败：{}",
+                        appointment.getAppointmentId(), e.getMessage(), e);
+            }
+        }
+
+        logger.info("爽约判定任务完成，共处罚 {} 条爽约记录", processedCount);
         return processedCount;
     }
 
     /**
-     * 【内部方法】处理单个爽约预约
+     * 【定时任务】自动解封封禁已过期的用户
      *
-     * 【业务逻辑】
-     * 1. 检查是否存在更晚的爽约处理记录（避免重复处罚）
-     * 2. 查找上一次预约记录
-     * 3. 如果上一次也是爽约且在一个月内，连续爽约次数+1
-     * 4. 否则，连续爽约次数重置为1
-     * 5. 更新用户爽约次数和封禁截止时间
-     * 6. 将预约状态更新为6（已过期）
-     *
-     * 【参数说明】
-     * @param appointment 爽约的预约实体
+     * 【执行频率】每分钟执行一次，确保封禁到期后立即解封
      */
-    private void processNoShow(Appointment appointment) {
-        Long visitorId = appointment.getVisitorId();
-        LocalDateTime currentEndTime = appointment.getExpectedEndTime();
+    @Scheduled(cron = "0 */1 * * * ?")
+    @Transactional
+    public int autoUnbanExpiredUsers() {
+        logger.debug("开始执行自动解封任务...");
         LocalDateTime now = LocalDateTime.now();
 
-        if (visitorId == null || currentEndTime == null) {
-            return;
+        List<User> expiredUsers = userService.findExpiredBans(now);
+        if (expiredUsers == null || expiredUsers.isEmpty()) {
+            logger.debug("自动解封任务完成，无需要解封的用户");
+            return 0;
         }
 
-        User user = userService.findById(visitorId.intValue());
-        if (user == null) {
-            return;
-        }
-
-        // 检查是否存在更晚的爽约处理记录（避免重复处罚）
-        boolean hasLaterProcessedNoShow = appointmentMapper.countLaterNoShowProcessed(visitorId, currentEndTime) > 0;
-        if (!hasLaterProcessedNoShow) {
-            // 查找上一次预约记录
-            Appointment previous = appointmentMapper.findLatestRelevantBefore(visitorId, currentEndTime);
-
-            // 判断上一次是否也是爽约且在一个月内
-            boolean consecutiveNoShowWithinOneMonth = previous != null
-                    && isNoShowStatus(previous.getStatus())
-                    && previous.getExpectedEndTime() != null
-                    && !previous.getExpectedEndTime().isBefore(currentEndTime.minusMonths(1));
-
-            // 计算新的连续爽约次数
-            int currentMissedCount = (user.getMissedCount() == null ? 0 : user.getMissedCount());
-            int newMissedCount = consecutiveNoShowWithinOneMonth ? currentMissedCount + 1 : 1;
-            user.setMissedCount(newMissedCount);
-
-            // 连续爽约2次，禁止预约3个月
-            if (newMissedCount >= 2) {
-                user.setBannedUntil(now.plusMonths(3));
+        int unbanCount = 0;
+        for (User user : expiredUsers) {
+            logger.info("[自动解封] 用户 {} 封禁已过期({})，执行解封",
+                    user.getUserId(), user.getBannedUntil());
+            user.setMissedCount(0);
+            user.setBannedUntil(null);
+            int rows = userService.update(user);
+            if (rows > 0) {
+                unbanCount++;
+                logger.info("[自动解封] 用户 {} 解封成功", user.getUserId());
+            } else {
+                logger.error("[自动解封] 用户 {} 解封失败，数据库未更新", user.getUserId());
             }
-
-            userService.update(user);
-            logger.info("用户 {} 爽约次数更新为 {}，禁止截止时间：{}", user.getUserId(), newMissedCount, user.getBannedUntil());
-        } else {
-            logger.info("预约 {} 存在更晚爽约处理记录，跳过用户处罚回算", appointment.getAppointmentId());
         }
 
-        // 更新预约状态为已过期（6）
-        appointmentMapper.updateStatus(appointment.getAppointmentId(), 6);
-        appointment.setStatus(6);
-    }
-
-    /**
-     * 【内部方法】判断是否为爽约状态
-     *
-     * 【业务逻辑】
-     * 预约成功(1)但没签到，超过宽限期后会变成已过期(6)，
-     * 这两种状态都视为爽约，用于连续爽约的判定。
-     *
-     * 【参数说明】
-     * @param status 预约状态
-     *
-     * 【返回值】
-     * @return 是否为爽约状态
-     */
-    private boolean isNoShowStatus(Integer status) {
-        return status != null && (status == 1 || status == 6);
+        logger.info("自动解封任务完成，共解封 {} 位用户", unbanCount);
+        return unbanCount;
     }
 }

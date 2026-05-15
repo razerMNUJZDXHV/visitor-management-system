@@ -12,7 +12,7 @@
 </view>
 
 <view wx:if="{{banInfo.bannedUntil}}" class="ban-tip">
-  ⚠️ 您已被禁止预约至 {{banInfo.bannedUntil}}（累计爽约 {{banInfo.missedCount}} 次）
+  ⚠️ 您已被禁止预约至 {{banInfo.bannedUntil}}（两次爽约间隔在30天内）
 </view>
   <scroll-view class="form-scroll" scroll-y enhanced show-scrollbar="{{false}}" enable-passive="{{true}}">
 
@@ -50,7 +50,7 @@
       <view class="form-item">
         <text class="label required">预计到达时间</text>
         <view class="picker-container" bindtap="openPicker" data-type="start">
-          <text class="picker-text">{{form.expectedStartTime || '请选择'}}</text>
+          <text class="picker-text">{{displayStartTime || '请选择'}}</text>
           <text class="picker-arrow">></text>
         </view>
       </view>
@@ -59,7 +59,7 @@
       <view class="form-item">
         <text class="label required">预计离开时间</text>
         <view class="picker-container" bindtap="openPicker" data-type="end">
-          <text class="picker-text">{{form.expectedEndTime || '请选择'}}</text>
+          <text class="picker-text">{{displayEndTime || '请选择'}}</text>
           <text class="picker-arrow">></text>
         </view>
       </view>

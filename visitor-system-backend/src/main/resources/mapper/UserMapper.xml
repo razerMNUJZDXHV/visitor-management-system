@@ -15,6 +15,16 @@
         <if test="userType != null">
             AND user_type = #{userType}
         </if>
+        <if test="bannedStatus != null">
+            <choose>
+                <when test="bannedStatus == 1">
+                    AND banned_until IS NOT NULL AND banned_until &gt; #{now}
+                </when>
+                <when test="bannedStatus == 0">
+                    AND (banned_until IS NULL OR banned_until &lt;= #{now})
+                </when>
+            </choose>
+        </if>
     </sql>
 
     <resultMap id="BaseResultMap" type="com.gpj.visitorsystem.entity.User">
@@ -25,7 +35,7 @@
         <result column="real_name" property="realName" />
         <result column="user_type" property="userType" />
         <result column="create_time" property="createTime" />
-        <!-- ==================== 核心修复1：补充 password 映射（仅MyBatis内部用，@JsonIgnore不会返回前端） ==================== -->
+        <!-- password 仅 MyBatis 内部使用，已配置 @JsonIgnore 不会返回前端 -->
         <result column="password" property="password" />
         <result column="missed_count" property="missedCount" />
         <result column="banned_until" property="bannedUntil" />
@@ -39,7 +49,7 @@
         FROM user WHERE openid = #{openid}
     </select>
 
-    <!-- ==================== 核心修复2：登录查询必须返回 password！ ==================== -->
+    <!-- 登录查询需返回 password 供密码校验使用 -->
     <select id="findByPhone" resultMap="BaseResultMap">
         SELECT user_id, openid, session_key, phone, real_name, user_type, create_time, password
         FROM user WHERE phone = #{phone}
@@ -56,8 +66,11 @@
             <if test="phone != null">phone = #{phone},</if>
             <if test="realName != null">real_name = #{realName},</if>
             <if test="userType != null">user_type = #{userType},</if>
+            <!-- 强制更新 missed_count（即使是 0 也要写入） -->
             <if test="missedCount != null">missed_count = #{missedCount},</if>
             <if test="bannedUntil != null">banned_until = #{bannedUntil},</if>
+            <!-- 显式处理 bannedUntil 为 null 的情况（解封时清空） -->
+            <if test="bannedUntil == null">banned_until = NULL,</if>
             <if test="refreshToken != null">refresh_token = #{refreshToken},</if>
             <if test="refreshTokenExpireTime != null">refresh_token_expire_time = #{refreshTokenExpireTime},</if>
         </set>
@@ -73,7 +86,8 @@
 
     <!-- 多条件查询用户列表（不分页，不需要password） -->
     <select id="listUsers" resultMap="BaseResultMap">
-        SELECT user_id, openid, session_key, phone, real_name, user_type, create_time
+        SELECT user_id, openid, session_key, phone, real_name, user_type, create_time,
+               missed_count, banned_until
         FROM user
         <where>
             <include refid="User_Where_Condition" />
@@ -109,7 +123,8 @@
 
     <!-- 分页查询用户列表（不需要password） -->
     <select id="listUsersPage" resultMap="BaseResultMap">
-        SELECT user_id, openid, session_key, phone, real_name, user_type, create_time
+        SELECT user_id, openid, session_key, phone, real_name, user_type, create_time,
+               missed_count, banned_until
         FROM user
         <where>
             <include refid="User_Where_Condition" />
@@ -124,6 +139,20 @@
         <where>
             <include refid="User_Where_Condition" />
         </where>
+    </select>
+
+    <!-- 查询封禁已过期的用户（定时任务自动解封用） -->
+    <select id="listExpiredBans" resultMap="BaseResultMap">
+        SELECT user_id, openid, session_key, phone, real_name, user_type, create_time,
+               missed_count, banned_until
+        FROM user
+        WHERE banned_until IS NOT NULL AND banned_until &lt; #{now}
+    </select>
+
+    <!-- 统计当前被封禁的用户数量（管理端异常监控用） -->
+    <select id="countBannedUsers" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM user
+        WHERE banned_until IS NOT NULL AND banned_until &gt; #{now}
     </select>
 
 </mapper>

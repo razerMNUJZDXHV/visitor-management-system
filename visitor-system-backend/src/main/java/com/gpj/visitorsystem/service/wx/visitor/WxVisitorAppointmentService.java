@@ -29,7 +29,7 @@ import java.util.Map;
  * 【核心职责】
  * 1. 处理访客端的预约创建、查询、取消
  * 2. 生成预约二维码（JWT Token + Base64二维码图片）
- * 3. 爽约判定与处罚（连续爽约2次封禁3个月）
+ * 3. 爽约判定与处罚（两次爽约间隔在30天内则封禁3个月）
  * 4. 查询预约设置和开放状态
  * 5. 身份证号AES加密存储保护隐私
  *
@@ -40,7 +40,7 @@ import java.util.Map;
  * 4. 取消预约：未审批前可取消（status=3）
  * 5. 生成二维码：审批通过后生成JWT Token二维码供安保扫码
  * 6. 爽约判定：超过预计离开时间+30分钟宽限期未签到视为爽约
- *    连续爽约2次封禁3个月，禁止预约
+ *    两次爽约间隔在30天内则封禁3个月
  * 7. 身份证号加密：AES加密后入库，查询时解密展示
  *
  * 【依赖说明】
@@ -89,10 +89,11 @@ public class WxVisitorAppointmentService {
      * 1. 校验预计到达时间不能为空
      * 2. 调用AppointmentSettingService校验预约是否开放
      * 3. 校验每日预约人数上限（如果设置了）
-     * 4. 校验用户存在性、封禁状态、用户类型（只有访客能预约）
-     * 5. 更新用户真实姓名（如果提交了）
-     * 6. 加密身份证号（AES加密存储）
-     * 7. 保存预约记录（status=0 待审核）
+     * 4. 实时检查并处理该访客的爽约记录
+     * 5. 校验用户存在性、封禁状态、用户类型（只有访客能预约）
+     * 6. 更新用户真实姓名（如果提交了）
+     * 7. 加密身份证号（AES加密存储）
+     * 8. 保存预约记录（status=0 待审核）
      *
      * 【参数说明】
      * @param appointment 预约信息，包含visitorId、visitorName、visitorPhone、visitorIdCard等
@@ -128,7 +129,10 @@ public class WxVisitorAppointmentService {
             }
         }
 
-        // 3. 校验用户存在性和状态
+        // 3. 实时检查并处理该访客的爽约记录（处罚条件刚满足时立即执行）
+        userService.checkNoShowAndPunishForUser(appointment.getVisitorId().intValue());
+
+        // 4. 校验用户存在性和状态（处罚后重新查询，确保读到最新状态）
         User user = userService.findById(appointment.getVisitorId().intValue());
         if (user == null) {
             throw new BusinessException("用户不存在");
@@ -166,14 +170,13 @@ public class WxVisitorAppointmentService {
      *
      * 【业务背景】
      * 访客在小程序端查看自己的预约记录，需要展示预约详情。
-     * 查询时需要对身份证号解密，并自动应用爽约处罚和过期状态。
+     * 查询时对身份证号解密，并应用过期状态展示。
      *
      * 【实现逻辑】
      * 1. 根据visitorId查询预约列表
      * 2. 遍历列表，对每个预约：
      *    - 解密身份证号（AES解密，失败则显示为***）
-     *    - 检查并应用爽约处罚（checkAndApplyPenalty）
-     *    - 应用过期状态（applyExpiredStatus）
+     *    - 应用过期状态（applyExpiredStatus，仅前端展示）
      *
      * 【参数说明】
      * @param visitorId 访客用户ID
@@ -182,18 +185,15 @@ public class WxVisitorAppointmentService {
      * @return 预约列表，按创建时间倒序
      *
      * 【注意事项】
-     * - 爽约处罚会在查询时自动应用，更新用户的missedCount和bannedUntil
-     * - 过期的预约会自动更新status为6
+     * - 爽约处罚由定时任务和实时检查处理，查询时只展示过期状态
+     * - 过期的预约会在前端显示为status=6
      */
     public List<Appointment> listMyAppointments(Integer visitorId) {
-        User user = userService.findById(visitorId);
         List<Appointment> list = appointmentMapper.listByVisitorId(visitorId);
         for (Appointment app : list) {
             // 解密身份证号（用于前端展示）
             AppointmentUtil.decryptIdCard(app, aesEncryptUtil);
-            // 检查并应用爽约处罚
-            checkAndApplyPenalty(user, app);
-            // 应用过期状态（如果已过期，status改为6）
+            // 应用过期状态（仅前端展示态更新，不写库不处罚）
             AppointmentUtil.applyExpiredStatus(app);
         }
         return list;
@@ -204,14 +204,13 @@ public class WxVisitorAppointmentService {
      *
      * 【业务背景】
      * 访客查看预约详情时，需要展示完整信息。
-     * 查询时需要对身份证号解密，并自动应用爽约处罚和过期状态。
+     * 查询时对身份证号解密，并应用过期状态展示。
      *
      * 【实现逻辑】
      * 1. 根据appointmentId查询预约
      * 2. 权限校验：只能查看自己的预约
      * 3. 解密身份证号（AES解密，失败则显示为***）
-     * 4. 检查并应用爽约处罚（checkAndApplyPenalty）
-     * 5. 应用过期状态（applyExpiredStatus）
+     * 4. 应用过期状态（applyExpiredStatus，仅前端展示）
      *
      * 【参数说明】
      * @param appointmentId 预约ID
@@ -234,10 +233,7 @@ public class WxVisitorAppointmentService {
         }
         // 解密身份证号
         AppointmentUtil.decryptIdCard(appointment, aesEncryptUtil);
-        User user = userService.findById(visitorId);
-        // 检查并应用爽约处罚
-        checkAndApplyPenalty(user, appointment);
-        // 应用过期状态
+        // 应用过期状态（仅前端展示态更新，不写库不处罚）
         AppointmentUtil.applyExpiredStatus(appointment);
         return appointment;
     }
@@ -352,137 +348,7 @@ public class WxVisitorAppointmentService {
         return qrCodeUrl;
     }
 
-    /**
-     * 【功能】应用过期状态
-     *
-     * 【业务背景】
-     * 预约在不同状态下，过期的判定逻辑不同。
-     * 待审核的预约，到达预计离开时间即过期；
-     * 预约成功或已签到的，需要加上30分钟宽限期。
-     *
-     * 【实现逻辑】
-     * 1. 如果status=0（待审核），到达expectedEndTime即过期
-     * 2. 如果status=1或4（预约成功/已签到），超过expectedEndTime+30分钟才过期
-     * 3. 过期后将status更新为6
-     *
-     * 【参数说明】
-     * @param appointment 预约实体
-     *
-     * 【注意事项】
-     * - 此方法会直接修改传入的appointment对象的status
-     * - 需要在查询预约时调用，确保状态是最新的
-     */
 
-    /**
-     * 【功能】检查并应用爽约处罚
-     *
-     * 【业务背景】
-     * 访客预约成功后，如果超过预计离开时间+30分钟宽限期仍未签到，
-     * 视为爽约。连续两次爽约（间隔不超过1个月）将封禁预约权限3个月。
-     *
-     * 【实现逻辑】
-     * 1. 只处理status=1（预约成功）的预约
-     * 2. 判断是否超过宽限过期时间，未超过则不处理
-     * 3. 检查是否存在更晚的爽约处理记录（避免重复处罚）
-     * 4. 如果没有，查找上一次预约记录
-     * 5. 如果上一次也是爽约且在一个月内，连续爽约次数=2，封禁3个月
-     * 6. 否则，爽约次数=1，不封禁
-     * 7. 更新用户爽约次数和封禁截止时间
-     * 8. 将预约状态更新为6（已过期）
-     *
-     * 【参数说明】
-     * @param user 用户实体
-     * @param appointment 预约实体
-     *
-     * 【注意事项】
-     * - 如果已经存在更晚的爽约处理记录，跳过处罚，避免重复
-     * - 连续爽约的判定：上一次也是爽约状态，且间隔不超过1个月
-     * - 封禁时间是3个月，从当前时间算起
-     */
-    private void checkAndApplyPenalty(User user, Appointment appointment) {
-        // 只处理预约成功（1）的状态
-        if (appointment.getStatus() != 1) {
-            return;
-        }
-        // 如果未超过宽限过期时间，不处理
-        if (!LocalDateTime.now().isAfter(AppointmentUtil.getGraceExpireTime(appointment))) {
-            return;
-        }
-
-        Long visitorId = appointment.getVisitorId();
-        LocalDateTime currentEndTime = appointment.getExpectedEndTime();
-        LocalDateTime now = LocalDateTime.now();
-        if (visitorId == null || currentEndTime == null) {
-            return;
-        }
-
-        // 检查是否存在更晚的爽约处理记录（避免重复处罚）
-        boolean hasLaterProcessedNoShow = appointmentMapper.countLaterNoShowProcessed(visitorId, currentEndTime) > 0;
-        if (!hasLaterProcessedNoShow) {
-            // 查找上一次预约记录
-            Appointment previous = appointmentMapper.findLatestRelevantBefore(visitorId, currentEndTime);
-            // 判断上一次是否也是爽约且在一个月内
-            boolean consecutiveNoShowWithinOneMonth = previous != null
-                    && isNoShowStatus(previous.getStatus())
-                    && previous.getExpectedEndTime() != null
-                    && !previous.getExpectedEndTime().isBefore(currentEndTime.minusMonths(1));
-
-            // 计算新的连续爽约次数
-            int currentMissedCount = (user.getMissedCount() == null ? 0 : user.getMissedCount());
-            int newMissedCount = consecutiveNoShowWithinOneMonth ? currentMissedCount + 1 : 1;
-            user.setMissedCount(newMissedCount);
-            // 连续爽约2次，禁止预约3个月
-            if (newMissedCount >= 2) {
-                user.setBannedUntil(now.plusMonths(3));
-            }
-            userService.update(user);
-            logger.info("用户 {} 爽约次数更新为 {}，禁止截止时间：{}", user.getUserId(), newMissedCount, user.getBannedUntil());
-        } else {
-            logger.info("预约 {} 存在更晚爽约处理记录，跳过用户处罚回算", appointment.getAppointmentId());
-        }
-
-        // 更新预约状态为已过期（6）
-        appointmentMapper.updateStatus(appointment.getAppointmentId(), 6);
-        appointment.setStatus(6);
-    }
-
-    /**
-     * 【功能】判断是否为爽约状态
-     *
-     * 【业务背景】
-     * 预约成功（1）但没签到，超过宽限期后会变成已过期（6），
-     * 这两种状态都视为爽约，用于连续爽约的判定。
-     *
-     * 【实现逻辑】
-     * 判断status是否为1或6
-     *
-     * 【参数说明】
-     * @param status 预约状态
-     *
-     * 【返回值】
-     * @return 是否为爽约状态
-     */
-    private boolean isNoShowStatus(Integer status) {
-        return status != null && (status == 1 || status == 6);
-    }
-
-    /**
-     * 【功能】计算二维码宽限过期时间
-     *
-     * 【业务背景】
-     * 二维码的有效期不是预计离开时间，而是预计离开时间+30分钟宽限期。
-     * 这样访客如果稍微迟到，仍然可以正常通行。
-     *
-     * 【实现逻辑】
-     * 1. 如果appointment或expectedEndTime为空，返回当前时间（立即过期）
-     * 2. 否则返回expectedEndTime + 30分钟
-     *
-     * 【参数说明】
-     * @param appointment 预约实体
-     *
-     * 【返回值】
-     * @return 二维码宽限过期时间
-     */
     /**
      * 【功能】获取每日预约人数上限状态
      *

@@ -55,6 +55,11 @@ public class AdminStatsDTO {
     private long totalEmergency;      // 总紧急通行次数
     private long totalNonEmergency;   // 总非紧急通行次数
 
+    // ==================== 异常监控 ====================
+    private long todayNoShow;            // 今日爽约数（status=6且无签到记录），保留统计供后续扩展
+    private long overtimeStayingCount;   // 当前超时滞留人数（已签到未签离且超过宽限期）
+    private long bannedUserCount;        // 当前被封禁用户数（仪表盘当前主要展示此指标）
+
     // ==================== 峰值和图表数据 ====================
     private String peakHour;          // 高峰时段（如"09:00-10:00"）
     private List<SecurityStatsDTO.StatsPoint> dailyFlow;       // 每日流量（近30天）

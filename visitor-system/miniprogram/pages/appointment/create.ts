@@ -43,13 +43,14 @@ Page({
     applyDate: '', // 申请日期（格式化）
     showPicker: false, // 是否显示时间选择器
     pickerType: 'start' as 'start' | 'end', // 选择器类型（到达/离开）
-    pickerTitle: '', // 选择器标题
     pickerValue: [0, 0, 0, 0, 0], // 选择器当前值 [年,月,日,时,分]
     years: [] as number[], // 年份列表
     months: [] as number[], // 月份列表
     days: [] as number[], // 日期列表
     hours: [] as string[], // 小时列表
-    minutes: [] as string[] // 分钟列表
+    minutes: [] as string[], // 分钟列表
+    displayStartTime: '', // 预计到达时间（显示用，无T）
+    displayEndTime: ''    // 预计离开时间（显示用，无T）
   },
 
   /**
@@ -326,14 +327,19 @@ Page({
         if (endTime && selectedDate >= endTime) {
           this.setData({
             'form.expectedStartTime': finalValue,
-            'form.expectedEndTime': ''
+            'form.expectedEndTime': '',
+            displayStartTime: formatDateTimeFromStr(finalValue),
+            displayEndTime: ''
           });
           wx.showToast({ title: '离开时间已清空，请重新选择', icon: 'none' });
           this.closePicker();
           return;
         }
       }
-      this.setData({ 'form.expectedStartTime': finalValue });
+      this.setData({
+        'form.expectedStartTime': finalValue,
+        displayStartTime: formatDateTimeFromStr(finalValue)
+      });
       this.closePicker();
       return;
     }
@@ -342,7 +348,10 @@ Page({
     if (pickerType === 'end') {
       const startTimeStr = this.data.form.expectedStartTime;
       if (!startTimeStr) {
-        this.setData({ 'form.expectedEndTime': finalValue });
+        this.setData({
+          'form.expectedEndTime': finalValue,
+          displayEndTime: formatDateTimeFromStr(finalValue)
+        });
         this.closePicker();
         return;
       }
@@ -358,7 +367,10 @@ Page({
         return; // 不关闭弹窗
       }
 
-      this.setData({ 'form.expectedEndTime': finalValue });
+      this.setData({
+        'form.expectedEndTime': finalValue,
+        displayEndTime: formatDateTimeFromStr(finalValue)
+      });
       this.closePicker();
     }
   },
@@ -397,9 +409,10 @@ Page({
         expectedEndTime: ''
       },
       reasonLength: 0,
-      applyDate: this.formatDateTime(new Date())
+      applyDate: this.formatDateTime(new Date()),
+      displayStartTime: '',
+      displayEndTime: ''
     });
-    wx.showToast({ title: '已重置', icon: 'success' });
   },
 
   handleSubmit() {
@@ -474,7 +487,9 @@ Page({
         'form.visitReason': '',
         'form.expectedStartTime': '',
         'form.expectedEndTime': '',
-        reasonLength: 0
+        reasonLength: 0,
+        displayStartTime: '',
+        displayEndTime: ''
       });
   
       setTimeout(() => {

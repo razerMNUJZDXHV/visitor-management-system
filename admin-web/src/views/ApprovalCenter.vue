@@ -70,7 +70,7 @@
             class="approval-table"
             @row-click="row => goDetail(row, 'pending')"
           >
-            <el-table-column prop="appointmentId" label="编号" width="100" align="center" />
+            <el-table-column prop="appointmentId" label="预约ID" width="100" align="center" />
             <el-table-column prop="visitorName" label="访客姓名" min-width="120" />
             <el-table-column prop="visitorPhone" label="手机号" min-width="140" />
             <el-table-column prop="intervieweeName" label="被访人" min-width="140" />
@@ -185,11 +185,11 @@
             @row-click="row => goDetail(row, 'history')"
             @selection-change="handleHistorySelectionChange"
           >
-            <el-table-column type="selection" width="55" align="center" :selectable="row => canDeleteRecord(row.status)" />
-            <el-table-column prop="appointmentId" label="编号" width="100" align="center" />
+            <el-table-column type="selection" width="55" align="center" :selectable="row => canDeleteRecord(row)" />
+            <el-table-column prop="appointmentId" label="预约ID" width="100" align="center" />
             <el-table-column prop="visitorName" label="访客姓名" min-width="120" />
             <el-table-column prop="visitorPhone" label="手机号" min-width="140" />
-            <el-table-column prop="statusText" label="状态" width="110" align="center">
+            <el-table-column prop="statusText" label="状态" width="140" align="center">
               <template #default="scope">
                 <el-tag :type="getStatusTagType(scope.row.status)" effect="light">{{ scope.row.statusText }}</el-tag>
               </template>
@@ -201,7 +201,7 @@
               <template #default="scope">
                 <el-button type="primary" link @click.stop="goDetail(scope.row, 'history')">查看详情</el-button>
                 <el-button
-                  v-if="canDeleteRecord(scope.row.status)"
+                  v-if="canDeleteRecord(scope.row)"
                   type="danger"
                   link
                   @click.stop="handleDeleteRecord(scope.row)"
@@ -491,8 +491,12 @@ const goDetail = (item, mode) => {
 }
 
 // 判断是否可删除记录
-const canDeleteRecord = (status) => {
-  return DELETABLE_STATUS.includes(Number(status))
+const canDeleteRecord = (row) => {
+  const status = Number(row.status)
+  if (!DELETABLE_STATUS.includes(status)) return false
+  // 仅滞留超时（已过期且已签到但未签离）禁止删除
+  if (status === 6 && row.overtimeStaying === true) return false
+  return true
 }
 
 // 勾选记录变化
@@ -757,10 +761,6 @@ onMounted(() => {
 
 .approval-tabs :deep(.el-tabs__item) {
   font-weight: 600;
-}
-
-.tab-badge {
-  margin-left: 8px;
 }
 
 .panel-card {

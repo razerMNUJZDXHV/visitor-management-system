@@ -22,7 +22,7 @@ import java.util.List;
  * 1. 访客创建预约：insert插入新预约记录（status=0待审核）
  * 2. 审批人查询待审批：listByApproverIdAndStatus查询待审核列表
  * 3. 审批通过/拒绝：updateStatus更新状态和审批人
- * 4. 爽约判定：findLatestRelevantBefore找上一次已处理预约，countLaterNoShowProcessed避免重复处罚
+ * 4. 爽约判定：findLatestRelevantBefore查找上一次爽约记录，countAccessLogByAppointmentAndType检查是否已签到
  * 5. 安保查询待签离：listLeaveTimeReached找该签离的预约
  * 6. 超时滞留查询：listOvertimeStaying找超时滞留的预约
  * 7. 管理端列表：listAppointmentsPage分页查询，countAppointments查总数
@@ -66,6 +66,13 @@ public interface AppointmentMapper {
      */
     List<Appointment> listByStatus(@Param("status") Integer status);
 
+    /**
+     * 根据状态和访客ID查询预约列表
+     * 实时处罚用：查询指定访客所有状态为指定值的预约
+     */
+    List<Appointment> listByStatusAndVisitorId(@Param("status") Integer status,
+                                               @Param("visitorId") Integer visitorId);
+
     // ==================== 爽约判定相关 ====================
 
     /**
@@ -77,11 +84,12 @@ public interface AppointmentMapper {
                                          @Param("beforeTime") LocalDateTime beforeTime);
 
     /**
-     * 检查是否存在更晚的爽约记录（避免重复处罚）
-     * 如果后面已经有更晚的爽约记录处理过了，这次就不用再处罚了
+     * 统计指定预约的通行记录数量（用于爽约判定：检查是否已签到）
+     * @param appointmentId 预约ID
+     * @param accessType 1-签到，2-签离
      */
-    int countLaterNoShowProcessed(@Param("visitorId") Long visitorId,
-                                  @Param("afterTime") LocalDateTime afterTime);
+    int countAccessLogByAppointmentAndType(@Param("appointmentId") Long appointmentId,
+                                           @Param("accessType") Integer accessType);
 
     // ==================== 预约状态更新 ====================
 
@@ -187,6 +195,20 @@ public interface AppointmentMapper {
      * @param graceDeadline 宽限期截止时间
      */
     List<Appointment> listOvertimeStaying(@Param("graceDeadline") LocalDateTime graceDeadline);
+
+    /**
+     * 统计当前超时滞留的预约数量
+     * 用途：管理端异常监控
+     */
+    long countOvertimeStaying(@Param("graceDeadline") LocalDateTime graceDeadline);
+
+    /**
+     * 统计今日爽约的预约数量
+     * 条件：status=6 且 expected_end_time 在今日范围内 且无签到记录
+     * 用途：保留统计，供后续扩展或报表使用；仪表盘当前主要展示 bannedUserCount
+     */
+    long countTodayNoShow(@Param("start") LocalDateTime start,
+                          @Param("end") LocalDateTime end);
 
     /**
      * 查当前生效的紧急预约（无需审批，直接生效）

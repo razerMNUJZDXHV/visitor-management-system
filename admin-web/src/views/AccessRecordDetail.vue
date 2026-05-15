@@ -41,6 +41,13 @@
             </div>
 
             <div class="info-section">
+              <div class="section-title">关联预约</div>
+              <el-descriptions :column="2" border class="detail-descriptions compact-descriptions">
+                <el-descriptions-item label="预约ID">{{ record.appointmentId || '—' }}</el-descriptions-item>
+              </el-descriptions>
+            </div>
+
+            <div class="info-section">
               <div class="section-title">安保信息</div>
               <el-descriptions :column="2" border class="detail-descriptions compact-descriptions">
                 <el-descriptions-item label="安保ID">{{ record.securityId || '—' }}</el-descriptions-item>
@@ -88,34 +95,13 @@
             </template>
 
             <div class="side-body">
-              <div class="meta-block status-block">
-                <div class="meta-label">通行类型</div>
-                <div class="meta-value">
-                  <el-tag :type="Number(record.accessType) === 1 ? 'success' : 'warning'" effect="light">
-                    {{ Number(record.accessType) === 1 ? '签到' : '签离' }}
-                  </el-tag>
-                </div>
-              </div>
-
-              <div class="meta-block">
-                <div class="meta-label">记录编号</div>
-                <div class="meta-value">#{{ record.logId || '—' }}</div>
-              </div>
-
-              <div class="meta-block">
-                <div class="meta-label">通行时间</div>
-                <div class="meta-value">{{ formatDateTime(record.accessTime) }}</div>
-              </div>
-
               <template v-if="canDelete">
-                <el-alert
-                  type="warning"
-                  :closable="false"
-                  show-icon
-                  title="该记录关联的预约已完成，可以删除。"
-                  class="operate-alert"
-                />
                 <el-button type="danger" plain :loading="deleting" @click="handleDelete">删除记录</el-button>
+                <el-result
+                  icon="success"
+                  title="记录可删除"
+                  sub-title="该记录关联的预约已完成"
+                />
               </template>
 
               <template v-else>
@@ -134,7 +120,7 @@
 </template>
 
 <script setup>
-// 通行记录详情：展示通行信息并支持删除已完成记录。
+// 通行记录详情：展示通行信息并支持删除可删除记录（已完成/已拒绝/已取消/非滞留超时已过期）。
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -318,34 +304,6 @@ onMounted(() => {
   flex-direction: column;
   gap: 16px;
   min-height: 100%;
-}
-
-.meta-block {
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid #ebeef5;
-  background: #fafafa;
-}
-
-.meta-label {
-  font-size: 12px;
-  color: #909399;
-  margin-bottom: 6px;
-}
-
-.meta-value {
-  font-size: 15px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.status-block .meta-value {
-  display: flex;
-  align-items: center;
-}
-
-.operate-alert {
-  margin-top: 4px;
 }
 
 @media (max-width: 1100px) {

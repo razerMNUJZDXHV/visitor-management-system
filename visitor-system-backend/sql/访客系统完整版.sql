@@ -107,6 +107,30 @@ ALTER TABLE `access_log` ADD INDEX `idx_access_time` (`access_time`);
 ALTER TABLE `access_log` ADD INDEX `idx_appointment_type_time` (`appointment_id`, `access_type`, `access_time`);
 
 -- =============================================
+-- 5. 索引补充（定时任务/爽约判定/审批历史/紧急登记场景优化）
+-- =============================================
+
+-- 1) 状态 + 预计离开时间
+-- 用途：expirePendingAppointments（每6小时过期扫描）、listLeaveTimeReached/listOvertimeStaying（每分钟告警扫描）
+-- 效果：避免定时任务全表扫描
+ALTER TABLE `appointment` ADD INDEX `idx_status_expected_end_time` (`status`, `expected_end_time`);
+
+-- 2) 访客ID + 预计离开时间
+-- 用途：findLatestRelevantBefore（查找上一次爽约记录）
+-- 效果：精确查找访客的上一次爽约记录
+ALTER TABLE `appointment` ADD INDEX `idx_visitor_expected_end_time` (`visitor_id`, `expected_end_time`);
+
+-- 3) 审批人 + 处理时间 + 创建时间
+-- 用途：findHistoryByApprover（审批人历史记录查询，按 process_time DESC, create_time DESC 排序）
+-- 效果：避免 filesort，加速排序和分页
+ALTER TABLE `appointment` ADD INDEX `idx_approver_process_time` (`approver_id`, `process_time`, `create_time`);
+
+-- 4) 紧急登记查询
+-- 用途：listEmergencyActive（安保端查询活跃的紧急手动登记）
+-- 效果：避免 interviewee_name 全表扫描
+ALTER TABLE `appointment` ADD INDEX `idx_interviewee_status` (`interviewee_name`, `status`, `create_time`);
+
+-- =============================================
 -- 完成提示
 -- =============================================
 SELECT '数据库初始化完成！' AS '提示';

@@ -372,7 +372,6 @@ onMounted(() => {
   color: #f56c6c;
 }
 
-.window-text,
 .update-text {
   font-size: 18px;
   color: #303133;

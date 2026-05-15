@@ -122,7 +122,7 @@ const loading = ref(false)
 const chartsLoading = ref(false)
 // 统计维度
 const days = ref(7)
-const hourlyType = ref('day') // 时段流量类型：day/week/month
+const hourlyType = ref('day') // 时段流量类型：day/week/month/all
 // 统计数据模型
 const stats = ref({
   todayFlow: 0,
@@ -688,22 +688,6 @@ onBeforeUnmount(() => {
 
 .status-danger {
   color: #f56c6c;
-}
-
-.status-info {
-  color: #409eff;
-}
-
-.status-muted {
-  color: #909399;
-}
-
-.status-expire {
-  color: #a65b17;
-}
-
-.summary-completed {
-  color: #2f9d9a;
 }
 
 .chart-row {

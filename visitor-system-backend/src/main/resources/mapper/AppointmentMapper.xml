@@ -50,24 +50,40 @@
         SELECT * FROM appointment WHERE status = #{status}
     </select>
 
+    <!-- 根据状态和访客ID查询预约列表 -->
+    <select id="listByStatusAndVisitorId" resultMap="BaseResultMap">
+        SELECT * FROM appointment WHERE status = #{status} AND visitor_id = #{visitorId}
+    </select>
+
     <!-- 根据预约ID查询详情 -->
     <select id="findById" resultMap="BaseResultMap">
         SELECT * FROM appointment WHERE appointment_id = #{appointmentId}
     </select>
 
     <!--
-        查找访客在指定时间之前最近的已处理预约
-        用于爽约判定：获取上一次预约的结束时间
-        status IN (1,3,4,5,6) 表示已处理（非待审核）的预约
+        查找访客在指定时间之前最近的无签到记录的已过期预约
+        用于爽约判定：获取上一次爽约的结束时间，判断是否在一个月内
+        条件：status=6 且 access_log 中不存在 access_type=1 的记录（即从未签到）
+        严格隔离：只有"预约成功后一直未签到导致的过期"才算爽约
     -->
     <select id="findLatestRelevantBefore" resultMap="BaseResultMap">
-        SELECT * FROM appointment WHERE visitor_id = #{visitorId} AND expected_end_time &lt; #{beforeTime}
-        AND status IN (1,3,4,5,6) ORDER BY expected_end_time DESC LIMIT 1
+        SELECT * FROM appointment a
+        WHERE a.visitor_id = #{visitorId}
+          AND a.expected_end_time &lt; #{beforeTime}
+          AND a.status = 6
+          AND NOT EXISTS (
+              SELECT 1 FROM access_log al
+              WHERE al.appointment_id = a.appointment_id AND al.access_type = 1
+          )
+        ORDER BY a.expected_end_time DESC LIMIT 1
     </select>
 
-    <!-- 统计访客在指定时间之后的已过期预约数量（status=6） -->
-    <select id="countLaterNoShowProcessed" resultType="int">
-        SELECT COUNT(1) FROM appointment WHERE visitor_id = #{visitorId} AND expected_end_time &gt; #{afterTime} AND status = 6
+    <!--
+        统计指定预约的通行记录数量
+        用途：爽约判定前检查该预约是否已被签到（access_type=1）
+    -->
+    <select id="countAccessLogByAppointmentAndType" resultType="int">
+        SELECT COUNT(1) FROM access_log WHERE appointment_id = #{appointmentId} AND access_type = #{accessType}
     </select>
 
     <!-- 更新预约状态 -->
@@ -256,6 +272,42 @@
     </select>
 
     <!--
+        统计当前超时滞留的预约数量（管理端异常监控用）
+        条件与 listOvertimeStaying 相同
+    -->
+    <select id="countOvertimeStaying" resultType="java.lang.Long">
+        SELECT COUNT(1) FROM appointment a
+        WHERE a.status IN (4, 6)
+            AND (a.interviewee_name IS NULL OR a.interviewee_name &lt;&gt; '紧急手动登记')
+            AND a.expected_end_time &lt;= #{graceDeadline}
+            AND EXISTS (
+                SELECT 1 FROM access_log l1
+                WHERE l1.appointment_id = a.appointment_id
+                  AND l1.access_type = 1
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM access_log l2
+                WHERE l2.appointment_id = a.appointment_id
+                  AND l2.access_type = 2
+            )
+    </select>
+
+    <!--
+        统计今日爽约的预约数量（管理端异常监控用）
+        条件：status=6 且 expected_end_time 在今日范围内 且无签到记录
+    -->
+    <select id="countTodayNoShow" resultType="java.lang.Long">
+        SELECT COUNT(1) FROM appointment a
+        WHERE a.status = 6
+          AND a.expected_end_time &gt;= #{start}
+          AND a.expected_end_time &lt; #{end}
+          AND NOT EXISTS (
+              SELECT 1 FROM access_log al
+              WHERE al.appointment_id = a.appointment_id AND al.access_type = 1
+          )
+    </select>
+
+    <!--
         管理员查询历史预约记录（关联审批人信息）
         返回类型：AdminAppointmentDetailDTO（包含审批人姓名、手机号）
         性能说明：避免使用 DATE() 函数包裹列，改为范围查询以使用索引
@@ -317,12 +369,20 @@
     </select>
 
     <select id="countTodayAppointments" resultType="java.lang.Long">
-        SELECT COUNT(1) FROM appointment WHERE DATE(create_time) = CURDATE()
+        SELECT COUNT(1) FROM appointment
+        WHERE create_time >= CURDATE()
+          AND create_time &lt; CURDATE() + INTERVAL 1 DAY
     </select>
 
+    <!--
+        统计指定日期的有效预约数量（用于每日上限校验）
+        条件：状态为已通过(1)、已签到(4)、已完成(5)，或已过期(6)但已有签到记录
+        排除：待审核(0)、已拒绝(2)、已取消(3)、已过期但未签到
+    -->
     <select id="countByDate" resultType="java.lang.Long">
         SELECT COUNT(1) FROM appointment a
-        WHERE DATE(a.create_time) = #{date}
+        WHERE a.create_time >= STR_TO_DATE(#{date}, '%Y-%m-%d')
+          AND a.create_time &lt; STR_TO_DATE(#{date}, '%Y-%m-%d') + INTERVAL 1 DAY
         AND (
             a.status IN (1, 4, 5)
             OR (a.status = 6 AND EXISTS (

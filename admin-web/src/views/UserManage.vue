@@ -34,6 +34,18 @@
           <el-option label="管理员" :value="4" />
         </el-select>
       </el-form-item>
+      <el-form-item label="封禁状态">
+        <el-select 
+          v-model="searchForm.banStatus" 
+          placeholder="全部" 
+          clearable 
+          style="width: 120px;"
+          @change="handleSearch"
+        >
+          <el-option label="正常" :value="0" />
+          <el-option label="封禁中" :value="1" />
+        </el-select>
+      </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">搜索</el-button>
           <el-button @click="handleReset">重置</el-button>
@@ -52,12 +64,18 @@
           <span>{{ getUserTypeText(scope.row.userType) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="创建时间" width="200" align="center">
+      <el-table-column label="封禁状态" width="120" align="center">
         <template #default="scope">
-          {{ formatDateTime(scope.row.createTime) }}
+          <el-tag v-if="isBanned(scope.row)" type="danger" effect="light">封禁中</el-tag>
+          <el-tag v-else type="success" effect="light">正常</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="220" align="center">
+      <el-table-column label="封禁截止" width="180" align="center">
+        <template #default="scope">
+          {{ scope.row.bannedUntil ? formatDateTime(scope.row.bannedUntil) : '—' }}
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="280" align="center">
         <template #default="scope">
           <el-button 
             type="primary" 
@@ -66,7 +84,14 @@
           >
             修改
           </el-button>
-          
+          <el-button
+            v-if="Number(scope.row.userType) === 1 && isBanned(scope.row)"
+            type="warning"
+            size="small"
+            @click="handleUnban(scope.row)"
+          >
+            解封
+          </el-button>
           <el-popconfirm
             title="确认删除该用户吗？"
             confirm-button-text="删除"
@@ -133,7 +158,6 @@
             系统仅您一位管理员，不可修改用户类型，但可修改手机号、姓名和密码
           </div>
         </el-form-item>
-        <!-- ==================== 核心修复1：密码输入框去掉 readonly hack ==================== -->
         <el-form-item v-if="form.userType === 4" label="密码" prop="password">
           <el-input 
             v-model="form.password" 
@@ -162,12 +186,13 @@
 import { ref, reactive, onMounted, computed, inject, watch, nextTick } from 'vue'
 import axios from '../api/axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { formatDateTime } from '../utils/appointment'
 import { PASSWORD_REGEX } from '../utils/validators'
 
 // 路由与全局状态
 const router = useRouter()
+const route = useRoute()
 const globalState = inject('globalState')
 
 // 从本地缓存读取当前登录用户
@@ -188,7 +213,8 @@ const currentUser = ref(getCurrentUser())
 const searchForm = reactive({
   phone: '',
   realName: '',
-  userType: null
+  userType: null,
+  banStatus: null
 })
 
 // 分页状态
@@ -270,6 +296,12 @@ const getUserTypeText = (type) => {
   return map[type] || '未知'
 }
 
+// 判断是否处于封禁状态
+const isBanned = (row) => {
+  if (!row.bannedUntil) return false
+  return new Date(row.bannedUntil).getTime() > Date.now()
+}
+
 // 获取管理员数量，用于判断是否允许降级/删除
 const fetchAdminCount = async () => {
   try {
@@ -287,13 +319,17 @@ const loadUserList = async () => {
   loading.value = true
   try {
     const params = {
-      ...searchForm,
+      phone: searchForm.phone || undefined,
+      realName: searchForm.realName || undefined,
+      userType: searchForm.userType || undefined,
+      bannedStatus: searchForm.banStatus !== null && searchForm.banStatus !== undefined ? searchForm.banStatus : undefined,
       pageNum: pagination.pageNum,
       pageSize: pagination.pageSize
     }
     const res = await axios.get('/api/admin/user/list', { params })
+
     if (res.code === 200) {
-      userList.value = res.data.list
+      userList.value = res.data.list || []
       pagination.total = res.data.total
     } else {
       ElMessage.error(res.msg)
@@ -422,6 +458,36 @@ const handleDelete = async (userId) => {
   }
 }
 
+// 手动解封访客
+const handleUnban = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确认解除访客 ${row.realName}（${row.phone}）的封禁吗？`,
+      '解封确认',
+      {
+        confirmButtonText: '确认解封',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+  } catch {
+    return
+  }
+
+  try {
+    const res = await axios.post(`/api/admin/user/unban?userId=${row.userId}`)
+    if (res.code === 200) {
+      ElMessage.success('解封成功')
+      loadUserList()
+    } else {
+      ElMessage.error(res.msg || '解封失败')
+    }
+  } catch (err) {
+    console.error('解封失败：', err)
+    ElMessage.error(err.response?.data?.msg || '解封失败')
+  }
+}
+
 // 触发搜索
 const handleSearch = () => {
   pagination.pageNum = 1
@@ -433,6 +499,7 @@ const handleReset = () => {
   searchForm.phone = ''
   searchForm.realName = ''
   searchForm.userType = null
+  searchForm.banStatus = null
   pagination.pageNum = 1
   loadUserList()
 }
@@ -478,6 +545,11 @@ const openUpdateDialog = (row) => {
 
 // 初始化加载
 onMounted(() => {
+  // 从路由参数恢复封禁状态筛选（从仪表盘跳转时）
+  const banParam = route.query.banStatus
+  if (banParam === '1') {
+    searchForm.banStatus = 1
+  }
   loadUserList()
   fetchAdminCount()
 })

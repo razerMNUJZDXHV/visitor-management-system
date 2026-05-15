@@ -4,6 +4,8 @@ import com.gpj.visitorsystem.dto.admin.AdminStatsDTO;
 import com.gpj.visitorsystem.dto.wx.security.SecurityStatsDTO;
 import com.gpj.visitorsystem.mapper.AccessLogMapper;
 import com.gpj.visitorsystem.mapper.AppointmentMapper;
+import com.gpj.visitorsystem.mapper.UserMapper;
+import com.gpj.visitorsystem.util.AppointmentUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -43,6 +45,8 @@ public class AdminStatsService {
     private AccessLogMapper accessLogMapper;
     @Autowired
     private AppointmentMapper appointmentMapper;
+    @Autowired
+    private UserMapper userMapper;
 
     /**
      * 获取统计数据
@@ -133,6 +137,20 @@ public class AdminStatsService {
         long totalFlow = accessLogMapper.countTotalFrom(LocalDateTime.of(1970, 1, 1, 0, 0));
         dto.setTotalEmergency(totalEmergency);
         dto.setTotalNonEmergency(Math.max(0, totalFlow - totalEmergency));
+
+        // ==================== 异常监控数据 ====================
+        LocalDateTime nowDateTime = LocalDateTime.now();
+        LocalDateTime todayEnd = todayStart.plusDays(1);
+
+        // 今日爽约数（保留统计，仪表盘当前主要展示 bannedUserCount）
+        dto.setTodayNoShow(appointmentMapper.countTodayNoShow(todayStart, todayEnd));
+
+        // 当前超时滞留人数
+        LocalDateTime graceDeadline = nowDateTime.minusMinutes(AppointmentUtil.QR_GRACE_MINUTES);
+        dto.setOvertimeStayingCount(appointmentMapper.countOvertimeStaying(graceDeadline));
+
+        // 当前被封禁用户数
+        dto.setBannedUserCount(userMapper.countBannedUsers(nowDateTime));
 
         return dto;
     }

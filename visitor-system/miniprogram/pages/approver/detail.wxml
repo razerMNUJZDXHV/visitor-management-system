@@ -5,7 +5,7 @@
     <view class="info-card">
       <view class="card-title">预约状态</view>
       <view class="status-row">
-        <text class="status-badge status-pending">{{statusText}}</text>
+        <text class="status-badge {{statusClass}}">{{statusText}}</text>
       </view>
     </view>
 

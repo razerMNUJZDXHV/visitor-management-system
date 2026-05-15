@@ -62,12 +62,13 @@ public class AdminUserController {
      * 管理员分页查询用户列表
      *
      * 【接口说明】
-     * 支持按手机号、姓名、用户类型筛选用户列表。
+     * 支持按手机号、姓名、用户类型、封禁状态筛选用户列表。
      *
      * 【请求参数】
      * @param phone 手机号（可选）
      * @param realName 真实姓名（可选）
      * @param userType 用户类型（可选，1-访客 2-审批人 3-安保 4-管理员）
+     * @param bannedStatus 封禁状态（可选，0-正常 1-封禁中）
      * @param pageNum 页码（默认1）
      * @param pageSize 每页条数（默认10）
      *
@@ -82,11 +83,12 @@ public class AdminUserController {
             @RequestParam(required = false) String phone,
             @RequestParam(required = false) String realName,
             @RequestParam(required = false) Integer userType,
+            @RequestParam(required = false) Integer bannedStatus,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize) {
 
         return ResultDTO.success(adminUserService.listUsersPage(
-                phone, realName, userType, pageNum, pageSize));
+                phone, realName, userType, bannedStatus, pageNum, pageSize));
     }
 
     /**
@@ -158,8 +160,8 @@ public class AdminUserController {
      * 【接口说明】
      * 返回管理员数量，用于仪表盘展示。
      *
-    * 【请求参数】
-    * 无
+     * 【请求参数】
+     * 无
      *
      * 【返回值】
      * @return 管理员总数
@@ -170,6 +172,27 @@ public class AdminUserController {
     @GetMapping("/admin/count")
     public ResultDTO<Long> getAdminCount() {
         return ResultDTO.success(adminUserService.countAdminUsers());
+    }
+
+    /**
+     * 手动解除访客封禁
+     *
+     * 【接口说明】
+     * 仅访客角色支持手动解封，解封后清空 banned_until 和 missed_count。
+     *
+     * 【请求参数】
+     * @param userId 用户ID
+     *
+     * 【返回值】
+     * @return 成功
+     *
+     * 【异常情况】
+     * - 用户不存在/非访客/未封禁：返回对应错误信息
+     */
+    @PostMapping("/unban")
+    public ResultDTO<Void> unbanUser(@RequestParam Integer userId) {
+        adminUserService.unbanUser(userId);
+        return ResultDTO.success(null);
     }
 
     /**

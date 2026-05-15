@@ -17,7 +17,7 @@
           <el-card class="main-card" shadow="never">
             <div class="overview-grid">
               <div class="overview-item">
-                <div class="overview-label">申请编号</div>
+                <div class="overview-label">预约ID</div>
                 <div class="overview-value">#{{ appointment.appointmentId || '—' }}</div>
               </div>
               <div class="overview-item">
@@ -124,14 +124,23 @@
               </template>
 
               <template v-else>
-                <el-button v-if="canDeleteRecord" type="danger" plain :loading="submitting" @click="handleDeleteRecord">
-                  删除记录
-                </el-button>
-                <el-result
-                  icon="success"
-                  title="记录已处理"
-                  sub-title="当前记录已不可继续审批"
-                />
+                <template v-if="canDeleteRecord">
+                  <el-button type="danger" plain :loading="submitting" @click="handleDeleteRecord">
+                    删除记录
+                  </el-button>
+                  <el-result
+                    icon="success"
+                    title="记录已处理"
+                    sub-title="当前记录已不可继续审批"
+                  />
+                </template>
+                <template v-else>
+                  <el-result
+                    icon="info"
+                    title="不可删除"
+                    sub-title="访客已签到但未签离，完成签离后才可删除"
+                  />
+                </template>
               </template>
             </div>
           </el-card>
@@ -169,7 +178,13 @@ const isHistoryMode = computed(() => route.query.mode === 'history')
 // 是否允许审批操作
 const canOperate = computed(() => !isHistoryMode.value && Number(appointment.value.status) === 0)
 // 是否允许删除记录
-const canDeleteRecord = computed(() => [2, 3, 5, 6].includes(Number(appointment.value.status)))
+const canDeleteRecord = computed(() => {
+  const status = Number(appointment.value.status)
+  if (![2, 3, 5, 6].includes(status)) return false
+  // 仅滞留超时（已过期且已签到但未签离）禁止删除
+  if (status === 6 && appointment.value.overtimeStaying === true) return false
+  return true
+})
 // 页面标题
 const pageTitle = computed(() => '审批详情')
 // 状态文案与标签类型
@@ -466,34 +481,6 @@ onMounted(() => {
   flex-direction: column;
   gap: 16px;
   min-height: 100%;
-}
-
-.meta-block {
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid #ebeef5;
-  background: #fafafa;
-}
-
-.meta-label {
-  font-size: 12px;
-  color: #909399;
-  margin-bottom: 6px;
-}
-
-.meta-value {
-  font-size: 15px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.status-block .meta-value {
-  display: flex;
-  align-items: center;
-}
-
-.operate-alert {
-  margin-top: 4px;
 }
 
 .reject-box {
